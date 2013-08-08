@@ -2,17 +2,18 @@ module Main where
 
 import Text.ParserCombinators.Parsec
 import Control.Applicative  ((<$>),(*>),(<*),(<*>))
-import Data.ByteString.Lazy.Char8 as BS hiding ( head, map, concatMap, concat )
+import qualified Data.ByteString.Lazy.Char8 as BS
 import Language.Sexp ( parseExn, printHum, printMach )
 import Data.Sexp (Sexp(..))
 import System.Environment (getArgs)
 import Text.Printf
 import Data.Maybe (catMaybes)
+import Data.Char (isUpper)
 
 main = do
   selector <- parseSelector . head <$> getArgs
   sexps <- parseExn <$> BS.getContents
-  mapM_ (BS.putStrLn . printMach) $ concatMap (select selector) sexps
+  mapM_ (BS.putStrLn . printMach) $ catMaybes $ map (select selector) sexps
   
 data Selector = 
   Nth Int -- '[0]'
@@ -37,45 +38,48 @@ parseSelector str =
     named = Named . BS.pack <$> many1 alphaNum
       
 -- detect a special case of sexp that represents a record
-isRecord (List [Atom _recordname, List fields]) = True
+isRecord (List [Atom recordName, List fields]) | isUpper (BS.head recordName) = True
 isRecord _ = False
 
 -- Only call this on records
 recFields (List [Atom recordName, List fields]) = fields
 recName   (List [Atom recordName, List fields]) = recordName
 
-select (Nth idx) (Atom _) = fail (printf "Cannot select element %d from atom" idx)
-select (Nth idx) sexp@(List lst) 
-  | isRecord sexp = return $ (recFields sexp)!!idx
-  | otherwise     = return $ lst!!idx
+select (Nth idx) (Atom _)   = fail (printf "Cannot select element %d from atom" idx)
+select (Nth idx) (List lst) = return $ lst!!idx
 
 select Any sexp = return sexp
 
 select (Named name) (Atom _) = fail "Cannot select named field from atom"
+-- Special case for record field
+select (Named name) (List [Atom key, value]) | key == name = return value
 -- Special case for selecting whole record by record type name
-select (Named name) sexp@(List lst)
+select sel@(Named name) sexp@(List lst)
   | isRecord sexp =
-    if name == recName sexp then recFields sexp
-    else 
-      case catMaybes (map isNamed (recFields sexp)) of
-        []  -> fail "boo"
-        [f] -> return f
-        fs  -> return $ List fs
-  where
-    isNamed (List [Atom key, value]) | key == name = Just value
-    isNamed _ = Nothing
+    if name == recName sexp 
+    then return $ List $ recFields sexp
+    else selectAll sel (recFields sexp)
+  | otherwise = selectAll sel lst
 
-select (Descendant sel1 sel2) sexp =
-  case [ candidate | candidate <- select sel1 sexp ] of
-    []  -> fail "no matching descendants"
-    [c] -> select sel2 c
-    cs  -> select sel2 (List cs)
+select (Descendant sel1 sel2) sexp = do
+  candidate <- select sel1 sexp
+  select sel2 candidate
 
-select (Child sel1 sel2) sexps =
-  concat [ case select sel2 candidate of
-              [] -> 
-                case candidate of
-                  (List _) -> select (Child Any sel2) candidate
-                  (Atom _) -> []
-              results -> results
-         | candidate <- select sel1 sexps ]
+select (Child sel1 sel2) sexp = do
+  candidate <- select sel1 sexp
+  case select sel2 candidate of
+    Just result -> return result
+    Nothing -> 
+      case candidate of
+        (Atom _) -> fail "nowhere to descend"
+        maybeRec@(List lst) ->
+          selectAll (Child Any sel2) $ if isRecord maybeRec
+                                       then recFields maybeRec
+                                       else lst
+
+selectAll selector sexps =
+  let vals = catMaybes $ map (select selector) sexps in
+  case vals of
+    [] -> fail "nothing found"
+    [c] -> return c
+    cs -> return (List cs)
