@@ -11,8 +11,8 @@ import Data.Maybe (catMaybes)
 
 main = do
   selector <- parseSelector . head <$> getArgs
-  sexp <- parseExn <$> BS.getContents
-  mapM_ (BS.putStrLn . printMach) $ concatMap (select selector) sexp
+  sexps <- parseExn <$> BS.getContents
+  mapM_ (BS.putStrLn . printMach) $ concatMap (select selector) sexps
   
 data Selector = 
   Nth Int -- '[0]'
