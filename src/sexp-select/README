@@ -1,0 +1,27 @@
+Select parts of sexp using CSS-like selectors
+
+Supported selectors are:
+  [n]       - numbered element of the List
+  *         - any element
+  foo       - element named foo
+  foo bar   - element named bar that is descendent of foo
+  foo > bar - element named bar that is a child of foo
+
+Usage:
+    sexp-select 'selector expression' < file.sexp
+
+For example, for sexp file that contains:
+  (Foo ((unFoo 23) (getBar "42.0")))
+
+selectors would be evaluated like that:
+
+    '*'  ==> (Foo ((unFoo 23) (getBar "42.0"))
+    
+    '* > unFoo' ==> 23
+    
+    'Foo unFoo' ==> 23
+    
+    'Foo' ==> ((unFoo 23) (getBar "42.0")
+    
+    'Foo > *' ==> (unFoo 23)
+                  (getBar "42.0")
