@@ -16,6 +16,8 @@ For example, for sexp file that contains:
 selectors would be evaluated like that:
 
     '*'  ==> (Foo ((unFoo 23) (getBar "42.0"))
+
+    '* unFoo' ==> 23
     
     '* > unFoo' ==> 23
     
@@ -23,5 +25,6 @@ selectors would be evaluated like that:
     
     'Foo' ==> ((unFoo 23) (getBar "42.0")
     
-    'Foo > *' ==> (unFoo 23)
-                  (getBar "42.0")
+    'Foo > *' ==> ((unFoo 23) (getBar "42.0"))
+
+    'Foo [1] [0]' ==> getBar
