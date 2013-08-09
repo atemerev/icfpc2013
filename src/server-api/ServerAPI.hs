@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
 module ServerAPI where
 
 import Control.Applicative
@@ -6,7 +5,7 @@ import Data.Aeson
 
 data Problem = Problem { problemId :: String
                        , problemSize :: Int
-                       , operators :: [String]
+                       , operators :: [String]    -- TODO(vanya) This should be [Operator]
                        , isSolved :: Maybe Bool
                        , timeLeft :: Maybe Double
                        } deriving Show
