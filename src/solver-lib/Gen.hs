@@ -95,7 +95,7 @@ serExp' 1 _ InFoldBody = oneof $
     ((if ?tfold
       then id
       else (MainArg :))
-      [Zero, One, чFold1Arg, Fold2Arg])
+      [Zero, One, Fold1Arg, Fold2Arg])
 serExp' 1 _ _ = oneof $ map (\x -> return (x, False)) [Zero, One, MainArg]
 serExp' n restriction fs = oneof $ concat [
   if (n >= 4 && allowedIf restriction) then [serIf n restriction fs] else [],
