@@ -21,19 +21,21 @@ data EvalRequest = EvalRequest { programOrId :: ProgramOrId
                                , evalArguments :: [Word64]
                                } deriving Show
 
-data EvalResponse = EvalResponse { evalStatus :: String
-                                 , evalOutputs :: Maybe [String]
-                                 , evalMessage :: Maybe String
-                                 } deriving Show
+data EvalResponse = EvalOK { evalOutputs :: [Word64] }
+                  | EvalError { evalMessage :: Maybe String }
+                  deriving Show
 
 data Guess = Guess { guessProblemId :: String
                    , guessProgramText :: String -- TODO(vanya) should be Program
                    } deriving Show
 
-data GuessResponse = GuessResponse { guessStatus :: String
-                                   , guessValues :: Maybe [Word64]
-                                   , guessMessage :: Maybe String
-                                   } deriving Show
+data GuessResponse = Win
+                   | Mismatch { guessInput :: Word64
+                              , guessExpected :: Word64
+                              , guessActual :: Word64
+                              }
+                   | GuessError { guessMessage :: String }
+                   deriving Show
 
 data OpLimit = NoFolds | Fold | TFold deriving Show
 data TrainingRequest = TrainingRequest { size :: Maybe Int
@@ -83,16 +85,20 @@ instance ToJSON EvalRequest where
       ID id       -> object [ "id" .= id, "arguments" .= vals ]
 
 instance FromJSON EvalResponse where
-  parseJSON (Object v) = EvalResponse <$>
-                         v .: "status" <*>
-                         v .:? "outputs" <*>
-                         v .:? "message"
+  parseJSON (Object v) = do
+    status <- v .: "status"
+    case status of
+      "ok" -> EvalOK <$> map fromHex <$> (v .: "outputs")
+      "error" -> EvalError <$> v .: "message"
+      _ -> fail $ "Unknown EvalResponse status: " ++ status
 
 instance ToJSON EvalResponse where
-  toJSON p = object ([ "status" .= evalStatus p ]
-                     .=? ("outputs", evalOutputs p)
-                     .=? ("message", evalMessage p)
-                     )
+  toJSON (EvalOK os) = object [ "status" .= ("ok" :: String)
+                              , "outputs" .= map toHex os
+                              ]
+  toJSON (EvalError msg) = object [ "status" .= ("error" :: String)
+                                  , "message" .= msg
+                                  ]
 
 instance FromJSON Guess where
   parseJSON (Object v) = Guess <$>
@@ -105,14 +111,22 @@ instance ToJSON Guess where
                      ])
 
 instance FromJSON GuessResponse where
-  parseJSON (Object v) = GuessResponse <$>
-                         v .: "status" <*>
-                         (fmap (map fromHex) <$> (v .:? "values")) <*>
-                         v .:? "message"
+  parseJSON (Object v) = do
+    status <- v .: "status"
+    case status of
+      "win" -> return Win
+      "mismatch" -> do
+        [input, expected, actual] <- v .: "values"
+        return (Mismatch input expected actual)
+      "error" -> GuessError <$> v .: "message"
+      _ -> fail $ "Unknown GuessResponse status: " ++ status
+                      
 
 instance ToJSON GuessResponse where
-  toJSON p = object ([ "status" .= guessStatus p ]
-                     .=? ("values", guessValues p)
-                     .=? ("message", guessMessage p)
-                     )
-
+  toJSON Win = object [ "status" .= ("win" :: String) ]
+  toJSON (Mismatch i e a) = object [ "status" .= ("mismatch" :: String)
+                                   , "values" .= [toHex i, toHex e, toHex a]
+                                   ]
+  toJSON (GuessError msg) = object [ "status" .= ("error" :: String)
+                                   , "message" .= msg
+                                   ]
