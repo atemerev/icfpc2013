@@ -46,7 +46,7 @@ data TrainingResponse = TrainingResponse { challenge :: String
                                          , trainingId :: String
                                          , trainingSize :: Int
                                          , traininOps :: [String]
-                                         }
+                                         } deriving Show
 
 array lst = Array $ V.fromList lst
 instance ToJSON OpLimit where
