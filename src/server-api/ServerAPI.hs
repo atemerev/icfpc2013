@@ -88,11 +88,22 @@ instance FromJSON Guess where
                          v .: "id" <*>
                          v .: "program"
 
+instance ToJSON Guess where
+  toJSON p = object ([ "id" .= guessProblemId p
+                     , "program" .= guessProgram p
+                     ])
+
 instance FromJSON GuessResponse where
   parseJSON (Object v) = GuessResponse <$>
                          v .: "status" <*>
                          (fmap (map fromHex) <$> (v .:? "values")) <*>
                          v .:? "message"
+
+instance ToJSON GuessResponse where
+  toJSON p = object ([ "status" .= guessStatus p ]
+                     .=? ("values", guessValues p)
+                     .=? ("message", guessMessage p)
+                     )
 
 arglessRequest url = do
   rsp <- Network.HTTP.simpleHTTP (getRequest url)
