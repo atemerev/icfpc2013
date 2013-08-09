@@ -116,9 +116,9 @@ serFold n = do
   sizeArg <- elements [1..n - 4]
   sizeSeed <- elements [1..n - 3 - sizeArg]
   let sizeBody = n - 2 - sizeArg - sizeSeed
-  (a, foldA) <- serExp' sizeArg NoFold
-  (b, foldB) <- serExp' sizeSeed (if foldA then ExternalFold else NoFold)
-  (c, foldC) <- serExp' sizeBody (if (foldA || foldB) then ExternalFold else NoFold)
+  (a, foldA) <- serExp' sizeArg ExternalFold
+  (b, foldB) <- serExp' sizeSeed ExternalFold
+  (c, foldC) <- serExp' sizeBody InFoldBody
   return (Fold a b c, True)
 
 serUnop :: (Monad m) => Int -> FoldState -> (Exp -> Exp) -> Series m (Exp, Bool)
