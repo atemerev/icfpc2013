@@ -37,20 +37,34 @@ data GuessResponse = Win
                    | GuessError { guessMessage :: String }
                    deriving Show
 
-data OpLimit = NoFolds | Fold | TFold deriving Show
+data OpLimit = NoFolds | Fold | TFold deriving (Read, Show)
 data TrainingRequest = TrainingRequest { size :: Maybe Int
                                        , opLimit :: Maybe OpLimit
                                        } deriving Show
+
+data TrainingResponse = TrainingResponse { challenge :: String
+                                         , trainingId :: String
+                                         , trainingSize :: Int
+                                         , traininOps :: [String]
+                                         }
 
 array lst = Array $ V.fromList lst
 instance ToJSON OpLimit where
   toJSON NoFolds = array []
   toJSON Fold    = array ["fold"]
   toJSON TFold   = array ["tfold"]
-  
+        
 instance ToJSON TrainingRequest where
   toJSON (TrainingRequest sz op) = object [ "size" .= sz, "operators" .= op ]
   
+instance FromJSON TrainingResponse where
+  parseJSON (Object v) = 
+    TrainingResponse <$>
+      v .: "challenge" <*>
+      v .: "id" <*>
+      v .: "size" <*>
+      v .: "operators"
+
 fromHex :: String -> Word64
 fromHex = read
 
@@ -81,8 +95,8 @@ instance ToJSON Problem where
 instance ToJSON EvalRequest where
   toJSON (EvalRequest pgmOrId vals) = 
     case pgmOrId of
-      Program pgm -> object [ "program" .= pgm, "arguments" .= vals ]
-      ID id       -> object [ "id" .= id, "arguments" .= vals ]
+      Program pgm -> object [ "program" .= pgm, "arguments" .= map toHex vals ]
+      ID id       -> object [ "id" .= id,       "arguments" .= map toHex vals ]
 
 instance FromJSON EvalResponse where
   parseJSON (Object v) = do

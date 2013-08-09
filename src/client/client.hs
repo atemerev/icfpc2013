@@ -1,12 +1,13 @@
 module Main where
 
 import System.Environment
-import HttpClient (getMyproblems, getStatus, getAnyTrainingProblem, evalProgram, guessProgram)
+import StringClient (getMyproblems, getStatus, getTrainingProblem, evalProgram, guessProgram)
 import Options.Applicative
+import ServerAPI (OpLimit(..))
 
 data Cmd = MyProblems
          | Status
-         | Train
+         | Train { length :: Maybe Int, opLimit::Maybe OpLimit }
          | Eval String [String]
          | Guess String String
 
@@ -14,7 +15,7 @@ main = execParser options >>= run
 
 run MyProblems = putStrLn =<< getMyproblems
 run Status = putStrLn =<< getStatus
-run Train = putStrLn =<< getAnyTrainingProblem -- TODO: add args
+run (Train length oplimit) = putStrLn =<< getTrainingProblem length oplimit -- TODO: add args
 run (Eval program args) =  putStrLn =<< evalProgram program (map read args) -- TODO: add args
 run (Guess id program) = putStrLn =<< guessProgram id program -- TODO: add args
 
@@ -29,7 +30,7 @@ clientOptions =
     (info (pure Status)
      (progDesc "Get current team status"))
   <> command "train"
-    (info (pure Train)
+    (info train
      (progDesc "Get random task for training"))
   <> command "eval"
     (info eval
@@ -39,8 +40,11 @@ clientOptions =
      (progDesc "Provide guess for given program ID"))
   )
 
+train = Train <$> (fmap read <$> ( optional $ strOption (metavar "LENGTH" <> short 'l' <> long "length")))
+              <*> (fmap read <$> ( optional $ strOption (metavar "NoFold|Fold|TFold" <> short 'o' <> long "ops")))
+        
 eval = Eval <$> argument str (metavar "PROGRAM")
-            <*> arguments str (metavar "ARGS ...")
+            <*> arguments1 str (metavar "ARG1 [ARG2 .. ARG_n]")
 
 guess = Guess <$> argument str (metavar "ID")
               <*> argument str (metavar "PROGRAM")
