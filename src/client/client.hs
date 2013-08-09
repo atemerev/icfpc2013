@@ -8,6 +8,7 @@ import FileClient as FC (getUnsolved, getUnsolvedHS)
 import Gen
 import Data.List (isInfixOf, intercalate)
 import System.Timeout
+import Control.Exception (evaluate)
 import Text.Printf
 
 data Cmd = MyProblems
@@ -38,15 +39,16 @@ run (FindSolvable fname tmout) = do
     tryGen [] =  return ()
     tryGen (p:ps) 
       | problemSize p >= 16 = do  -- TODO
-        putStrLn ("skipping " ++ problemId p ++ " - too large")
+        -- putStrLn ("skipping " ++ problemId p ++ " - too large")
         tryGen ps
       | otherwise = do
       res <- timeout (tmout * 10^6) $ do
         let gen = generateRestricted (problemSize p) (operators p)
         let lgen = length gen
-        return (p, lgen `seq` lgen)
+        evaluate lgen
+        return (p, lgen)
       _ <- case res of  
-        Nothing -> putStrLn ("skipping " ++ problemId p ++ " - timed out")
+        Nothing -> return () -- putStrLn ("skipping " ++ problemId p ++ " - timed out")
         Just rs -> pp rs
       tryGen ps
     pp (p, sz) = putStrLn $ (printf "%s|%d|%s|%d" (problemId p) (problemSize p) (intercalate " " $ operators p) sz)
