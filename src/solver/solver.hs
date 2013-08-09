@@ -5,9 +5,7 @@ import ServerAPI
 import RandomBV
 import Filter
 import PP
-import Data.Aeson
 import Data.Maybe
-import qualified Data.ByteString.Lazy.Char8 as LBS8
 
 getProblem :: IO TrainingResponse
 getProblem = do
@@ -30,8 +28,3 @@ main = do
 
   gr <- guessProgram progId (ppProg first)
   print gr
-  {-
-  print $ length $ filter (all (== 1234) . eval') progs
-  where
-    eval' p = map (\x -> eval x undefined undefined p) bvs
-  -}

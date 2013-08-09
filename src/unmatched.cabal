@@ -35,7 +35,7 @@ library
                   , bytestring        >= 0.10
                   , pretty
 
-  hs-source-dirs:   server-api, solver, client-lib
+  hs-source-dirs:   server-api, solver-lib, client-lib
   exposed-modules:  ServerAPI
                   , Types
                   , RandomBV
@@ -54,3 +54,8 @@ executable client
                   , aeson             >= 0.6
                   , bytestring        >= 0.10
                   , optparse-applicative >= 0.5.2.1
+
+executable solver
+  hs-source-dirs: solver
+  build-depends: base, unmatched, smallcheck
+  main-is: solver.hs
