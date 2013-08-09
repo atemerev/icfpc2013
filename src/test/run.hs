@@ -4,21 +4,51 @@ import Test.Tasty.HUnit
 import Test.Tasty.SmallCheck
 
 import Types
-import Gen (serProg)
+import Gen (serProg, noRestriction)
 
 main = defaultMain allTests
 
 allTests = testGroup "Tests"
-  [ generatorTests ]
+  [ generatorTests, evalTests ]
 
-generatorTests = localOption (SmallCheckDepth 7) $ testGroup "Generator"
+generatorTests = localOption (SmallCheckDepth 7) $ testGroup "Generation"
   [ testProperty "Programs have correct size" $
       \n -> changeDepth (const n) $
-        over serProg $ \prog -> progSize prog == n
+        over (serProg noRestriction) $ \prog -> progSize prog == n
   , testProperty "Programs are valid" $
       \n -> changeDepth (const n) $
-        over serProg isValid
+        over (serProg noRestriction) isValid
   ]
+
+evalTests = testGroup "Evaluation" $
+  [ testCase "Main arg" $
+      ev MainArg 0x42 @?= 0x42
+  , testCase "If0 true" $
+      ev_ (If Zero One two) @?= 1
+  , testCase "If0 false" $
+      ev_ (If two One two) @?= 2
+  , testCase "Not" $
+      ev (Not MainArg)   0x00FF0FF000000000 @?= 0xFF00F00FFFFFFFFF
+  , testCase "Shl1" $
+      ev (Shl1 MainArg)  0xFFFFFFFFFFFFFFFF @?= 0xFFFFFFFFFFFFFFFE
+  , testCase "Shr1" $
+      ev (Shr1 MainArg)  0xFFFFFFFFFFFFFFFF @?= 0x7FFFFFFFFFFFFFFF
+  , testCase "Shr4" $
+      ev (Shr4 MainArg)  0xFFFFFFFFFFFFFFFF @?= 0x0FFFFFFFFFFFFFFF
+  , testCase "Shr16" $
+      ev (Shr16 MainArg) 0xFFFFFFFFFFFFFFFF @?= 0x0000FFFFFFFFFFFF
+  , testCase "Plus" $
+      ev (Plus MainArg MainArg) 0xFFFFFFFFFFFFFFFF @?= 0xFFFFFFFFFFFFFFFE
+  , testCase "Fold (commutative)" $
+      ev (Fold MainArg Zero (Plus Fold1Arg Fold2Arg)) 0x110318FF1609AA98 @?= 652
+  , testCase "Fold (non-commutative)" $
+      ev (Fold MainArg Zero (Plus (Shl1 Fold1Arg) Fold2Arg)) 0x110318FF1609AA98 @?= 1304
+  ]
+
+  where
+    ev prog x = eval x undefined undefined prog
+    ev_ prog = ev prog undefined
+    two = Plus One One
 
 progSize :: Exp -> Int
 progSize e = expSize e + 1

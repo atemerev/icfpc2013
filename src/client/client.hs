@@ -4,6 +4,7 @@ import System.Environment
 import StringClient (getMyproblems, getStatus, getTrainingProblem, evalProgram, evalProgramById, guessProgram)
 import Options.Applicative
 import ServerAPI (OpLimit(..))
+import Gen
 import Data.List (isInfixOf)
 
 data Cmd = MyProblems
@@ -11,17 +12,19 @@ data Cmd = MyProblems
          | Train { length :: Maybe Int, opLimit::Maybe OpLimit }
          | Eval String [String]
          | Guess String String
+         | Generate Int [String]
 
 main = execParser options >>= run
 
 run MyProblems = putStrLn =<< getMyproblems
 run Status = putStrLn =<< getStatus
-run (Train length oplimit) = putStrLn =<< getTrainingProblem length oplimit -- TODO: add args
+run (Train length oplimit) = putStrLn =<< getTrainingProblem length oplimit
 run (Eval programOrId args) = 
   if " " `isInfixOf` programOrId
-  then putStrLn =<< evalProgram     programOrId (map read args) -- TODO: add args
-  else putStrLn =<< evalProgramById programOrId (map read args) -- TODO: add args 
-run (Guess id program) = putStrLn =<< guessProgram id program -- TODO: add args
+  then putStrLn =<< evalProgram     programOrId (map read args)
+  else putStrLn =<< evalProgramById programOrId (map read args)
+run (Guess id program) = putStrLn =<< guessProgram id program
+run (Generate size ops) = mapM_ print $ generateRestricted size ops
 
 options = info (clientOptions <**> helper) idm
 
@@ -42,6 +45,9 @@ clientOptions =
   <> command "guess"
     (info guess
      (progDesc "Provide guess for given program ID"))
+  <> command "generate"
+    (info generate
+     (progDesc "Generate programs of given size with given ops restrictions"))
   )
 
 train = Train <$> (fmap read <$> ( optional $ strOption (metavar "LENGTH" <> short 'l' <> long "length")))
@@ -52,4 +58,7 @@ eval = Eval <$> argument str (metavar "PROGRAM or ID")
 
 guess = Guess <$> argument str (metavar "ID")
               <*> argument str (metavar "PROGRAM")
+
+generate = Generate <$> (read <$> argument str (metavar "SIZE"))
+                    <*> (words <$> argument str (metavar "OPERATIONS"))
 

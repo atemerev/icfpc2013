@@ -1,4 +1,4 @@
-module Gen (generateAll, serProg) where
+module Gen (generateRestricted, serProg, noRestriction) where
 
 import Types
 import Test.SmallCheck
@@ -8,13 +8,40 @@ import Control.Monad
 import qualified Data.Set as S
 import Data.Maybe (catMaybes)
 
-generateAll :: Int -> [Exp]
-generateAll n = list n serProg
+generateRestricted :: Int -> [String] -> [Exp] -- allowed ops are passed as string list
+generateRestricted n rst = 
+  generateRestricted' tfold n restriction
+  where
+    tfold = "tfold" `elem` rst
+    restriction = S.fromList $ map parse $ filter (/="tfold") rst
+    parse "not" = Not_op
+    parse "shl1" = Shl1_op
+    parse "shr1" = Shr1_op
+    parse "shr4" = Shr4_op
+    parse "shr16" = Shr16_op
+    parse "and" = And_op
+    parse "or" = Or_op
+    parse "xor" = Xor_op
+    parse "plus" = Plus_op
+    parse "if0" = If_op
+    parse "fold" = Fold_op
+    parse other = error $ "failed to parse operation " ++ other
 
+generateRestricted' :: Bool -> Int -> Restriction -> [Exp]
+generateRestricted' tfold n restriction = 
+  if tfold
+  then map (\e -> Fold MainArg Zero e) $ list (n-5) foldBodies -- |fold x 0| is 2 + 1 + 1, hence n-4, and another -1 for top-level lambda
+  else list n (serProg restriction)
+  where
+    foldBodies = do
+      n <- getDepth
+      (e, hasFold) <- serExp' n (S.delete Fold_op restriction) InFoldBody -- Fold should not be there, but remove it just in case
+      return e
 
 -- Generators are restricted to allowed function set
 data OpName = Not_op | Shl1_op | Shr1_op | Shr4_op | Shr16_op | And_op | Or_op | Xor_op | Plus_op | If_op | Fold_op deriving (Eq, Ord)
 type Restriction = S.Set OpName
+noRestriction = S.fromList [Not_op, Shl1_op, Shr1_op, Shr4_op, Shr16_op, And_op, Or_op, Xor_op, Plus_op, If_op, Fold_op]
 
 allow restriction opName f =
   if opName `S.member` restriction then Just f else Nothing
@@ -32,25 +59,15 @@ allowedIf r = If_op `S.member` r
   
 allowedFold :: Restriction -> Bool
 allowedFold r = Fold_op `S.member` r
-
-generateRestricted :: Bool -> Int -> Restriction -> [Exp]
-generateRestricted tfold n restriction = 
-  if tfold
-  then map (\e -> Fold MainArg Zero e) $ list (n-4) foldBodies -- |fold x 0| is 2 + 1 + 1, hence n-4
-  else list n serProg
-  where
-    foldBodies = do
-      n <- getDepth
-      (e, hasFold) <- serExp' n (S.delete Fold_op restriction) InFoldBody -- Fold should not be there, but remove it just in case
-      return e
       
-serProg:: Monad m => Series m Exp
-serProg = decDepth serExpression -- remove 1 level of depth for top-level lambda
+-- 
+serProg :: Monad m => Restriction -> Series m Exp
+serProg restriction = decDepth (serExpression restriction)-- remove 1 level of depth for top-level lambda
 
-serExpression :: (Monad m) => Series m Exp
-serExpression = do
+serExpression :: (Monad m) => Restriction -> Series m Exp
+serExpression restriction = do
   n <- getDepth
-  (e, hasFold) <- serExp' n (S.fromList [Not_op, Shl1_op, Shr1_op, Shr4_op, Shr16_op, And_op, Or_op, Xor_op, Plus_op, If_op, Fold_op]) NoFold -- TODO S.fromList
+  (e, hasFold) <- serExp' n restriction NoFold
   return e
 
 data FoldState = NoFold -- Allowed to generate unrestricted expression except references to fold args

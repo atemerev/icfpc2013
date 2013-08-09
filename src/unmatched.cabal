@@ -60,7 +60,7 @@ executable client
 
 executable solver
   hs-source-dirs: solver
-  build-depends: base, unmatched, smallcheck
+  build-depends: base, unmatched, smallcheck, containers
   main-is: solver.hs
 
 test-suite test
