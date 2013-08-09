@@ -7,7 +7,8 @@ import StringClient as SC (getMyproblems, getStatus, getTrainingProblem, evalPro
 import FileClient as FC (getUnsolved, getUnsolvedHS, filterByIds)
 import HsClient as HC (getTrainingProblem)
 import Gen
-import Data.List (isInfixOf, intercalate, find)
+import Data.List (isInfixOf, intercalate, find, sortBy)
+import Data.Ord (comparing)
 import Text.Printf
 import System.IO
 import Solve (solve, isFeasible)
@@ -47,7 +48,7 @@ run (Unsolved fname) = putStrLn =<< FC.getUnsolved fname
 
 run (FindSolvable fname tmout) = do
   problems <- FC.getUnsolvedHS fname
-  tryGen problems
+  tryGen $ sortBy (comparing problemSize) problems
   where
     tryGen [] =  return ()
     tryGen (p:ps) = do
