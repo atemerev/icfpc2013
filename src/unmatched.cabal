@@ -38,6 +38,7 @@ library
   hs-source-dirs:   server-api, solver-lib, client-lib
   exposed-modules:  ServerAPI
                   , Types
+                  , Gen
                   , RandomBV
                   , Filter
                   , PP

@@ -1,5 +1,6 @@
 import Test.SmallCheck.Series
 import Types
+import Gen
 import HsClient
 import ServerAPI
 import RandomBV
