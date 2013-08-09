@@ -58,11 +58,8 @@ executable client
                   , aeson             >= 0.6
                   , bytestring        >= 0.10
                   , optparse-applicative >= 0.5.2.1
-
-executable solver
-  hs-source-dirs: solver
-  build-depends: base, unmatched, smallcheck, containers
-  main-is: solver.hs
+                  , smallcheck
+                  , containers
 
 test-suite test
   type: exitcode-stdio-1.0

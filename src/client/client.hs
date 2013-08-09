@@ -2,14 +2,17 @@ module Main where
 
 import System.Environment
 import Options.Applicative
-import ServerAPI (OpLimit(..),Problem(..))
+import ServerAPI (OpLimit(..),Problem(..), TrainingResponse(..))
 import StringClient as SC (getMyproblems, getStatus, getTrainingProblem, evalProgram, evalProgramById, guessProgram)
 import FileClient as FC (getUnsolved, getUnsolvedHS)
+import HsClient as HC (getTrainingProblem)
 import Gen
 import Data.List (isInfixOf, intercalate)
 import System.Timeout
 import Control.Exception (evaluate)
 import Text.Printf
+import System.IO
+import Solve (solve)
 
 data Cmd = MyProblems
          | Status
@@ -19,12 +22,15 @@ data Cmd = MyProblems
          | Generate Int [String]
          | Unsolved String
          | FindSolvable String Int
+         | TrainSolve Int
 
-main = execParser options >>= run
+main = do
+  hSetBuffering stdout NoBuffering
+  execParser options >>= run
 
 run MyProblems = putStrLn =<< SC.getMyproblems
 run Status = putStrLn =<< getStatus
-run (Train length oplimit) = putStrLn =<< getTrainingProblem length oplimit
+run (Train length oplimit) = putStrLn =<< SC.getTrainingProblem length oplimit
 run (Eval programOrId args) = 
   if " " `isInfixOf` programOrId
   then putStrLn =<< evalProgram     programOrId (map read args)
@@ -52,6 +58,12 @@ run (FindSolvable fname tmout) = do
         Just rs -> pp rs
       tryGen ps
     pp (p, sz) = putStrLn $ (printf "%s|%d|%s|%d" (problemId p) (problemSize p) (intercalate " " $ operators p) sz)
+run (TrainSolve size) = do
+  p <- HC.getTrainingProblem (Just size) Nothing
+  let progId = (trainingId p)
+  print p
+  solve (trainingId p) size (trainingOps p)
+  
 
 options = info (clientOptions <**> helper) idm
 
@@ -81,6 +93,9 @@ clientOptions =
   <> command "find-solvable"
     (info findSolvable
      (progDesc "Find list of problems solvable by brute-force within N seconds"))
+  <> command "train-solve"
+    (info trainSolve
+     (progDesc "Solve the new training taks of the given size"))
   )
 
 train = Train <$> (fmap read <$> ( optional $ strOption (metavar "LENGTH" <> short 'l' <> long "length")))
@@ -99,3 +114,5 @@ unsolved = Unsolved <$> argument str (metavar "FILE")
 
 findSolvable = FindSolvable <$> argument str (metavar "FILE")
                             <*> (read <$> argument str (metavar "TIMEOUT"))
+
+trainSolve = TrainSolve <$> (read <$> argument str (metavar "SIZE"))
