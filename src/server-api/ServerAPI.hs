@@ -8,14 +8,33 @@ import Data.Aeson
 import qualified Data.Vector as V
 import Network.HTTP
 import qualified URLs
+import Data.Word
 
 data Problem = Problem { problemId :: String
-                       , problemSize :: Int
+                       , size :: Int
                        , operators :: [String]    -- TODO(vanya) This should be [Operator]
-                       , isSolved :: Maybe Bool
+                       , solved :: Maybe Bool
                        , timeLeft :: Maybe Double
                        } deriving Show
 
+data EvalRequest = EvalRequest { evalProgramId :: Maybe String
+                               , evalProgram :: Maybe String
+                               , evalArguments :: [Word64]
+                               } deriving Show
+
+data EvalResponse = EvalResponse { evalStatus :: String
+                                 , evalOutputs :: Maybe [String]
+                                 , evalMessage :: Maybe String
+                                 } deriving Show
+
+data Guess = Guess { guessProblemId :: String
+                   , guessProgram :: String -- TODO(vanya) should be Program
+                   } deriving Show
+
+data GuessResponse = GuessResponse { guessStatus :: String
+                                   , guessValues :: Maybe [Word64]
+                                   , guessMessage :: Maybe String
+                                   } deriving Show
 instance FromJSON Problem where
   parseJSON (Object v) = Problem <$>
                          v .: "id" <*>
@@ -23,6 +42,29 @@ instance FromJSON Problem where
                          v .: "operators" <*>
                          v .:? "solved" <*>
                          v .:? "timeLeft"
+
+instance FromJSON EvalRequest where
+  parseJSON (Object v) = EvalRequest <$>
+                         v .:? "id" <*>
+                         v .:? "program" <*>
+                         (map read <$> v .: "arguments")
+
+instance FromJSON EvalResponse where
+  parseJSON (Object v) = EvalResponse <$>
+                         v .: "status" <*>
+                         v .:? "program" <*>
+                         v .:? "message"
+
+instance FromJSON Guess where
+  parseJSON (Object v) = Guess <$>
+                         v .: "id" <*>
+                         v .: "program"
+
+instance FromJSON GuessResponse where
+  parseJSON (Object v) = GuessResponse <$>
+                         v .: "status" <*>
+                         (fmap (map read) <$> (v .:? "values")) <*>
+                         v .:? "message"
 
 arglessRequest url = do
   rsp <- Network.HTTP.simpleHTTP (getRequest url)
@@ -56,3 +98,4 @@ instance ToJSON OpLimit where
 ------------
 -- 5. Status
 getStatus = arglessRequest URLs.status
+
