@@ -8,6 +8,8 @@ import Network.Wai (Application, Response(..), pathInfo)
 import Network.Wai.Handler.Warp (run)
 import System.IO (putStrLn)
 
+import ServerAPI
+
 main = do
   let port = 8888
   putStrLn $ "FakeServer is listening on port " ++ show port
