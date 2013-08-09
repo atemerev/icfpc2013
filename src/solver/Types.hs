@@ -67,6 +67,9 @@ eval main fold1 fold2 e = eval' e
             (x1', x1) = x2' `divMod` 256
             (x0', x0) = x1' `divMod` 256
 
+serProg :: Monad m => Series m Exp
+serProg = decDepth series
+
 instance (Monad m) => Serial m Exp where
   series = serExp
 
@@ -130,6 +133,9 @@ serBinop n fs op = do
   (b, foldB) <- serExp' sizeB (if foldA then ExternalFold else fs)
   return (op a b, foldA || foldB)
 
+progSize :: Exp -> Int
+progSize e = expSize e + 1
+
 expSize :: Exp -> Int
 expSize Zero = 1
 expSize One = 1
@@ -187,5 +193,7 @@ isValid e = noBrokenRefs e && (numFolds e <= 1)
     noBrokenRefs (Plus a b) = noBrokenRefs a && noBrokenRefs b
 
 allExpsAreValid = smallCheck 6 isValid
-allExpsAreSpecifiedSize = and [all (\x -> expSize x == n) (list n serExp) | n <- [1..6]]
-
+allExpsAreSpecifiedSize =
+  smallCheck 6 $ \n ->
+  over (generate $ \_ -> list n serProg) $ \prog ->
+    progSize prog == n
