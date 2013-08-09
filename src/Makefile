@@ -3,11 +3,12 @@ CONFIG:=dist/setup-config
 EXECUTABLES:=fake-server server
 BINARIES:=$(foreach e,$(EXECUTABLES),dist/build/$(e)/$(e))
 ENABLE_TESTS=--enable-tests
+OPT=
 
 .PHONY: all fake clean deps
 
 all: $(CONFIG) $(SRC)
-	cabal build
+	cabal build $(OPT)
 
 fake: all
 	dist/build/fake-server/fake-server
