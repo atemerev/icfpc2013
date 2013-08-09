@@ -84,7 +84,7 @@ run (SolveMany offset limit tmout) = do
       putStrLn $ printf "Trying task %s, size %d, operations (%s)" (problemId p) (problemSize p) (intercalate " " $ operators p)
       res <- isFeasible tmout p
       _ <- case res of  
-        Nothing -> return () -- putStrLn ("skipping " ++ problemId p ++ " - timed out")
+        Nothing -> putStrLn ("  skipping " ++ problemId p ++ " - timed out")
         Just (p,expressions) -> solve' (problemId p) expressions
       trySolve ps
 
