@@ -58,7 +58,7 @@ run (FindSolvable fname tmout) = do
         Nothing -> return () -- putStrLn ("skipping " ++ problemId p ++ " - timed out")
         Just rs -> pp rs
       tryGen ps
-    pp (p, exps) = putStrLn $ (printf "%s|%d|%s|%d" (problemId p) (problemSize p) (intercalate " " $ operators p) (length exps))
+    pp (p, sz) = putStrLn $ (printf "%s|%d|%s|%d" (problemId p) (problemSize p) (intercalate " " $ operators p) sz)
 
 run (TrainSolve size) = do
   p <- HC.getTrainingProblem (Just size) Nothing
@@ -85,7 +85,7 @@ run (SolveMany offset limit tmout) = do
       res <- isFeasible tmout p
       _ <- case res of  
         Nothing -> putStrLn ("  skipping " ++ problemId p ++ " - timed out")
-        Just (p,expressions) -> solve' (problemId p) expressions
+        Just (p,_) -> solve (problemId p) (problemSize p) (operators p)
       trySolve ps
 
 options = info (clientOptions <**> helper) idm
