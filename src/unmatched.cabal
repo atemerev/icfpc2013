@@ -60,3 +60,14 @@ executable solver
   hs-source-dirs: solver
   build-depends: base, unmatched, smallcheck
   main-is: solver.hs
+
+test-suite test
+  type: exitcode-stdio-1.0
+  hs-source-dirs: test
+  main-is: run.hs
+  build-depends:
+    base,
+    tasty == 0.2,
+    tasty-smallcheck == 0.2,
+    tasty-hunit == 0.2,
+    unmatched
