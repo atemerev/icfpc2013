@@ -40,6 +40,8 @@ library
   hs-source-dirs:   server-api, solver
   exposed-modules:  ServerAPI
                   , Types
+                  , RandomBV
+                  , Filter
   other-modules:    URLs
 
 executable server
