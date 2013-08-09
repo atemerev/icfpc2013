@@ -29,7 +29,7 @@ generateRestricted n rst =
 generateRestricted' :: Bool -> Int -> Restriction -> [Exp]
 generateRestricted' tfold n restriction = 
   if tfold
-  then map (\e -> Fold MainArg Zero e) $ list (n-4) foldBodies -- |fold x 0| is 2 + 1 + 1, hence n-5
+  then map (\e -> Fold MainArg Zero e) $ list (n-5) foldBodies -- |fold x 0| is 2 + 1 + 1, hence n-4, and another -1 for top-level lambda
   else list n (serProg restriction)
   where
     foldBodies = do
