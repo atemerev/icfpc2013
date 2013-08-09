@@ -45,6 +45,7 @@ library
                   , Filter
                   , PP
                   , HsClient
+                  , FileClient
                   , StringClient
                   , URLs
 
