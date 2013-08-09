@@ -2,6 +2,7 @@ SRC:=$(shell find . -type f -name '*.hs')
 CONFIG:=dist/setup-config
 EXECUTABLES:=fake-server server
 BINARIES:=$(foreach e,$(EXECUTABLES),dist/build/$(e)/$(e))
+ENABLE_TESTS=--enable-tests
 
 .PHONY: all fake clean deps
 
@@ -15,8 +16,7 @@ clean:
 	rm -rf dist
 
 deps:
-	cabal install --enable-tests --only-dep
+	cabal install $(ENABLE_TESTS) --only-dep
 
 $(CONFIG): unmatched.cabal
-	cabal configure --enable-tests
-
+	cabal configure $(ENABLE_TESTS)
