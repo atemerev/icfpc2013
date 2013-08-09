@@ -130,7 +130,7 @@ instance FromJSON GuessResponse where
     case status of
       "win" -> return Win
       "mismatch" -> do
-        [input, expected, actual] <- v .: "values"
+        [input, expected, actual] <- map fromHex <$> v .: "values"
         return (Mismatch input expected actual)
       "error" -> GuessError <$> v .: "message"
       _ -> fail $ "Unknown GuessResponse status: " ++ status
