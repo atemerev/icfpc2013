@@ -21,7 +21,7 @@ data Cmd = MyProblems
          | Unsolved String
          | FindSolvable String Int
          | TrainSolve Int
-         | Solve String Int String
+         | Solve String String
          | Filter String String
            
 main = do
@@ -64,15 +64,11 @@ run (TrainSolve size) = do
   print p
   solve (trainingId p) size (trainingOps p)
 
-run (Solve fname tmout id) = do
+run (Solve fname id) = do
   problems <- FC.getUnsolvedHS fname
   case find ((==id).problemId) problems of
     Nothing -> error "No unsolved problems with this ID"
-    Just p -> do 
-      feasible <- isFeasible tmout p
-      case feasible of  
-        Nothing -> error "Not feasible to solve this problem"
-        Just _ -> solve (problemId p) (problemSize p) (operators p)
+    Just p -> solve (problemId p) (problemSize p) (operators p)
 
 run (Filter problemsFile idsFile) = FC.filterByIds problemsFile idsFile >>= putStrLn
   
@@ -135,7 +131,6 @@ findSolvable = FindSolvable <$> argument str (metavar "FILE")
 trainSolve = TrainSolve <$> (read <$> argument str (metavar "SIZE"))
 
 realSolve = Solve <$> argument str (metavar "FILE")
-                  <*> (read <$> argument str (metavar "TIMEOUT"))
                   <*> argument str (metavar "ID")
 
 filterProblems = Filter <$> argument str (metavar "MYPROBLEMS-FILE")

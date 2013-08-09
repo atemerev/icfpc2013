@@ -38,12 +38,10 @@ solve progId size operations = do
 
 -- Check if it is feasible to solve this problem by brute-force within 'timeout' seconds
 isFeasible :: Int -> Problem -> IO (Maybe (Problem, Int))
-isFeasible tmout p
-  | problemSize p >= 16 = return Nothing -- TODO
-  | otherwise =
-    timeout (tmout * 10^6) $ do
-      let gen = generateRestricted (problemSize p) (operators p)
-      let lgen = length gen
-      evaluate lgen
-      return (p, lgen)
+isFeasible tmout p =
+  timeout (tmout * 10^6) $ do
+    let gen = generateRestricted (problemSize p) (operators p)
+    let lgen = length gen
+    evaluate lgen
+    return (p, lgen)
       
