@@ -15,7 +15,7 @@ executable fake-server
   main-is: fake-server/FakeServer.hs           
   -- other-modules:       
   build-depends:    aeson             >= 0.6
-                  , base              == 4.6.*
+                  , base
                   , bytestring        >= 0.10
                   , blaze-builder     >= 0.3
                   , http-types        >= 0.8
@@ -27,7 +27,7 @@ executable fake-server
 
 library
   build-depends:    aeson             >= 0.6
-                  , base              == 4.6.*
+                  , base
                   , HTTP
                   , smallcheck
                   , text              >= 0.11
@@ -52,7 +52,7 @@ library
 executable client
   hs-source-dirs:  ./client
   main-is: client.hs
-  build-depends:    base == 4.6.*
+  build-depends:    base
                   , HTTP
                   , unmatched
                   , aeson             >= 0.6
@@ -64,7 +64,7 @@ executable client
 executable benchmark
   hs-source-dirs:  ./test
   main-is: benchmark.hs
-  build-depends:    base == 4.6.*
+  build-depends:    base
                   , unmatched
                   , smallcheck
 
