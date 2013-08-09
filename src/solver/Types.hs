@@ -31,6 +31,15 @@ eval main fold1 fold2 e = eval' e
         ; If c t f -> if eval' c == 0  -- TODO: Maybe /= 0, need to check.
                       then eval' t
                       else eval' f
+        ; Not e -> complement (eval' e)
+        ; Shl1 e -> shiftL (eval' e) 1
+        ; Shr1 e -> shiftR (eval' e) 1
+        ; Shr4 e -> shiftR (eval' e) 4
+        ; Shr16 e -> shiftR (eval' e) 16
+        ; And e1 e2 -> eval' e1 .&. eval' e2
+        ; Or e1 e2 -> eval' e1 .|. eval' e2
+        ; Xor e1 e2 -> xor (eval' e1) (eval' e2)
+        ; Plus e1 e2 -> eval' e1 + eval' e2
         ; Fold arg seed body -> foldImpl (eval' arg) (eval' seed) body
         }
         foldImpl x seed body = op x0 (op x1 (op x2 (op x3 (op x4 (op x5 (op x6 (op x7 seed)))))))
