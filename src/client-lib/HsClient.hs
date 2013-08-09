@@ -15,7 +15,7 @@ import ServerAPI
 
 wrap stringClient = do
   response <- stringClient
-  return $ fromMaybe (error "decode failed") $ decode $ BS.pack response
+  return $ fromMaybe (error $ "decode failed on "++response) $ decode $ BS.pack response
   
 -- getMyproblems           = wrap $ SC.getMyproblems
 -- getStatus               = wrap $ SC.getStatus
