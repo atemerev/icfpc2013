@@ -8,10 +8,28 @@ import Control.Monad
 import qualified Data.Set as S
 import Data.Maybe (catMaybes)
 
-generateRestricted :: Bool -> Int -> Restriction -> [Exp]
-generateRestricted tfold n restriction = 
+generateRestricted :: Int -> [String] -> [Exp] -- allowed ops are passed as string list
+generateRestricted n rst = 
+  generateRestricted' tfold n restriction
+  where
+    tfold = "tfold" `elem` rst
+    restriction = S.fromList $ map parse $ filter (/="tfold") rst
+    parse "not" = Not_op
+    parse "shl1" = Shl1_op
+    parse "shr1" = Shr1_op
+    parse "shr4" = Shr4_op
+    parse "shr16" = Shr16_op
+    parse "and" = And_op
+    parse "or" = Or_op
+    parse "xor" = Xor_op
+    parse "plus" = Plus_op
+    parse "if0" = If_op
+    parse "fold" = Fold_op
+
+generateRestricted' :: Bool -> Int -> Restriction -> [Exp]
+generateRestricted' tfold n restriction = 
   if tfold
-  then map (\e -> Fold MainArg Zero e) $ list (n-4) foldBodies -- |fold x 0| is 2 + 1 + 1, hence n-4
+  then map (\e -> Fold MainArg Zero e) $ list (n-4) foldBodies -- |fold x 0| is 2 + 1 + 1, hence n-5
   else list n (serProg restriction)
   where
     foldBodies = do

@@ -11,8 +11,8 @@ getProblem :: IO TrainingResponse
 getProblem = do
   getTrainingProblem (Just 8) Nothing
 
-progs :: [Exp]
-progs = generateAll 8
+progs :: [String] -> [Exp]
+progs ops = generateRestricted 8 ops -- TODO: provide proper restrictions
 
 main = do
   p <- getProblem
@@ -22,7 +22,7 @@ main = do
   print outputs
 
   let
-    candidates = filterProgs bvs outputs progs
+    candidates = filterProgs bvs outputs (progs (trainingOps p))
     first = head candidates -- XXX
   -- mapM_ (putStrLn . ppProg) candidates
   print first
