@@ -16,8 +16,8 @@ progs = list 7 series
 
 main = do
   p <- getProblem
-  str <- evalProgramById (trainingId p) bvs
-  putStrLn str
+  resp <- evalProgramById (trainingId p) bvs
+  print $ resp
 
   {-
   print $ length $ filter (all (== 1234) . eval') progs
