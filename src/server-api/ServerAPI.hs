@@ -11,7 +11,7 @@ import Text.Printf (printf)
 
 data Problem = Problem { problemId :: String
                        , problemSize :: Int
-                       , operators :: [String]    -- TODO(vanya) This should be [Operator]
+                       , operators :: [String]
                        , solved :: Maybe Bool
                        , timeLeft :: Maybe Double
                        } deriving Show
