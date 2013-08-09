@@ -25,6 +25,7 @@ generateRestricted n rst =
     parse "plus" = Plus_op
     parse "if0" = If_op
     parse "fold" = Fold_op
+    parse other = error $ "failed to parse operation " ++ other
 
 generateRestricted' :: Bool -> Int -> Restriction -> [Exp]
 generateRestricted' tfold n restriction = 
