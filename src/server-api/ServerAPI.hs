@@ -74,8 +74,14 @@ instance ToJSON Problem where
 instance FromJSON EvalResponse where
   parseJSON (Object v) = EvalResponse <$>
                          v .: "status" <*>
-                         v .:? "program" <*>
+                         v .:? "outputs" <*>
                          v .:? "message"
+
+instance ToJSON EvalResponse where
+  toJSON p = object ([ "status" .= evalStatus p ]
+                     .=? ("outputs", evalOutputs p)
+                     .=? ("message", evalMessage p)
+                     )
 
 instance FromJSON Guess where
   parseJSON (Object v) = Guess <$>
