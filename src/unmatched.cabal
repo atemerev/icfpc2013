@@ -24,9 +24,9 @@ executable fake-server
                   , http-types        >= 0.8
                   , wai               >= 1.4
                   , warp              >= 1.3
+                  , unmatched
 
   extensions:     OverloadedStrings
-  other-modules:    ServerAPI
 
 library
   build-depends:    aeson             >= 0.6
