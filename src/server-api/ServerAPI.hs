@@ -7,9 +7,11 @@ module ServerAPI ( getMyproblems
 
 import Control.Applicative
 import Data.Aeson
+import Data.Aeson.Types (Pair)
 import qualified Data.Vector as V
 import Network.HTTP hiding (postRequest)
 import qualified URLs
+import Data.Text (Text)
 import Data.Word
 import Data.ByteString.Lazy.Char8 as BS hiding (map)
 
@@ -45,6 +47,19 @@ instance FromJSON Problem where
                          v .: "operators" <*>
                          v .:? "solved" <*>
                          v .:? "timeLeft"
+
+(.=?) :: ToJSON a => [Pair] -> (Text, Maybe a) -> [Pair]
+(.=?) ps (_, Nothing) = ps
+(.=?) ps (name, Just v) = (name .= v) : ps
+
+instance ToJSON Problem where
+  toJSON p = object ([ "id" .= problemId p
+                     , "size" .= problemSize p
+                     , "operators" .= operators p
+                     ]
+                     .=? ("solved", solved p)
+                     .=? ("timeLeft", timeLeft p)
+                     )
 
 instance FromJSON EvalRequest where
   parseJSON (Object v) = EvalRequest <$>

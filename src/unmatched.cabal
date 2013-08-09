@@ -33,6 +33,7 @@ library
                   , base              == 4.6.*
                   , HTTP
                   , smallcheck
+                  , text              >= 0.11
                   , vector            >= 0.10
                   , bytestring        >= 0.10
 
