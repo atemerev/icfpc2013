@@ -36,6 +36,7 @@ library
                   , text              >= 0.11
                   , vector            >= 0.10
                   , bytestring        >= 0.10
+                  , pretty
 
   hs-source-dirs:   server-api, solver
   exposed-modules:  ServerAPI
