@@ -102,8 +102,8 @@ instance ToJSON Problem where
 instance ToJSON EvalRequest where
   toJSON (EvalRequest pgmOrId vals) = 
     case pgmOrId of
-      Program pgm -> object [ "program" .= pgm, "arguments" .= vals ]
-      ID id       -> object [ "id" .= id, "arguments" .= vals ]
+      Program pgm -> object [ "program" .= pgm, "arguments" .= map toHex vals ]
+      ID id       -> object [ "id" .= id,       "arguments" .= map toHex vals ]
 
 instance FromJSON EvalResponse where
   parseJSON (Object v) = do
