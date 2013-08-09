@@ -33,3 +33,4 @@ library
                   , base              == 4.6.*
   hs-source-dirs:   server-api
   exposed-modules:  ServerAPI
+                  , Types
