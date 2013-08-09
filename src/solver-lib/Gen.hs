@@ -119,19 +119,21 @@ elements = oneof . map return
 
 -- Generates (expression, does it contain a fold?)
 serExp' :: (Monad m, ?tfold :: Bool) => Int -> Restriction -> FoldState -> Series m (Exp, Bool)
-serExp' 1 _ InFoldBody = oneof $
-  map (\x -> return (x, False))
-    -- if tfold is set, the only occurrence of MainArg is at the toplevel
-    ((if ?tfold
-      then id
-      else (MainArg :))
-      [Zero, One, Fold1Arg, Fold2Arg])
-serExp' 1 _ _ = oneof $ map (\x -> return (x, False)) [Zero, One, MainArg]
+serExp' n _ _ | n < 1 = mzero
+-- if tfold is set, the only occurrence of MainArg is at the toplevel
+serExp' 1 _ InFoldBody = if ?tfold
+                         then elements [(Zero, False), (One, False), (Fold1Arg, False), (Fold2Arg, False)]
+                         else elements [(MainArg, False), (Zero, False), (One, False), (Fold1Arg, False), (Fold2Arg, False)]
+serExp' 1 _ _ = elements [(Zero, False), (One, False), (MainArg, False)]
+serExp' 2 restriction fs = oneof $ map (\op -> serUnop 2 restriction fs op) (allowedUnaryOps restriction)
+serExp' 3 restriction fs = oneof $ concat [
+  map (\op -> serUnop 3 restriction fs op) (allowedUnaryOps restriction),
+  map (\op -> serBinop 3 restriction fs op) (allowedBinaryOps restriction)]
 serExp' n restriction fs = oneof $ concat [
   if (n >= 4 && allowedIf restriction) then [serIf n restriction fs] else [],
   if (n >= 5 && fs == NoFold && allowedFold restriction) then [serFold n (restriction .&. complement (1 `shiftL` 10))] else [],
-  if n >= 2 then map (\op -> serUnop n restriction fs op) (allowedUnaryOps restriction) else [], 
-  if n >= 3 then map (\op -> serBinop n restriction fs op) (allowedBinaryOps restriction) else []]
+  map (\op -> serUnop n restriction fs op) (allowedUnaryOps restriction),
+  map (\op -> serBinop n restriction fs op) (allowedBinaryOps restriction)]
 
 serIf :: (Monad m, ?tfold :: Bool) => Int -> Restriction -> FoldState -> Series m (Exp, Bool)
 serIf n restriction fs = do
