@@ -3,6 +3,7 @@ module ServerAPI ( getMyproblems
                  , getStatus
                  , evalProgram
                  , evalProgramById
+                 , guessProgram
                  , getTrainingProblem
                  , getAnyTrainingProblem -- no size/ops limit
                  ) where
@@ -36,7 +37,7 @@ data EvalResponse = EvalResponse { evalStatus :: String
                                  } deriving Show
 
 data Guess = Guess { guessProblemId :: String
-                   , guessProgram :: String -- TODO(vanya) should be Program
+                   , guessProgramText :: String -- TODO(vanya) should be Program
                    } deriving Show
 
 data GuessResponse = GuessResponse { guessStatus :: String
@@ -121,6 +122,7 @@ postRequest url body = do
 -- 1. Getting problems
 getMyproblems = arglessRequest URLs.myproblems
   
+-------------------------
 -- 2. Evaluating programs
 instance ToJSON EvalRequest where
   toJSON (EvalRequest pgmOrId vals) = 
@@ -130,7 +132,13 @@ instance ToJSON EvalRequest where
 
 evalProgramById id vals  = postRequest URLs.eval (EvalRequest (ID id) vals)
 evalProgram pgm vals     = postRequest URLs.eval (EvalRequest (Program pgm) vals)
+
+------------------------
 -- 3. Submitting guesses
+instance ToJSON Guess where
+  toJSON (Guess id pgm) = object [ "id" .= id, "program" .= pgm ] 
+  
+guessProgram id pgm = postRequest URLs.guess (Guess id pgm)
 
 --------------
 -- 4. Training

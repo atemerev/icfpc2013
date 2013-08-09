@@ -1,7 +1,7 @@
 module Main where
 
 import System.Environment
-import ServerAPI (getMyproblems, getStatus, getAnyTrainingProblem, evalProgram)
+import ServerAPI (getMyproblems, getStatus, getAnyTrainingProblem, evalProgram, guessProgram)
 
 main = do
   args <- getArgs
@@ -10,3 +10,4 @@ main = do
     ["status"] -> putStrLn =<< getStatus
     ["train"] -> putStrLn =<< getAnyTrainingProblem -- TODO: add args
     ("eval":program:rest) -> putStrLn =<< evalProgram program (map read rest) -- TODO: add args
+    ["guess",id,program] -> putStrLn =<< guessProgram id program -- TODO: add args
