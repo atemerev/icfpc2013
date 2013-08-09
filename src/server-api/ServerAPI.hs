@@ -11,7 +11,7 @@ import qualified URLs
 import Data.Word
 
 data Problem = Problem { problemId :: String
-                       , size :: Int
+                       , problemSize :: Int
                        , operators :: [String]    -- TODO(vanya) This should be [Operator]
                        , solved :: Maybe Bool
                        , timeLeft :: Maybe Double
