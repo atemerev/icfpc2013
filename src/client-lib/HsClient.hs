@@ -1,6 +1,6 @@
-module HsClient ( -- getMyproblems
+module HsClient ( getMyproblems
                 -- , getStatus
-                 evalProgram
+                , evalProgram
                 , evalProgramById
                 , guessProgram
                 , getTrainingProblem
@@ -18,7 +18,9 @@ wrap fname stringClient = do
   response <- stringClient
   return $ fromMaybe (error $ fname ++ ": decode failed on "++response) $ decode $ BS.pack response
   
--- getMyproblems           = wrap $ SC.getMyproblems
+getMyproblems :: IO [Problem]
+getMyproblems = wrap "myproblems" $ SC.getMyproblems
+
 -- getStatus               = wrap $ SC.getStatus
 
 evalProgram     :: String -> [Word64] -> IO EvalResponse
