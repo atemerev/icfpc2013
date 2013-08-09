@@ -55,3 +55,4 @@ executable client
                   , unmatched
                   , aeson             >= 0.6
                   , bytestring        >= 0.10
+                  , optparse-applicative >= 0.5.2.1
