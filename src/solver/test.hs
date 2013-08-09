@@ -1,23 +1,22 @@
 import Test.SmallCheck.Series
 import Types
-import HttpClient
+import HsClient
 import ServerAPI
 import RandomBV
 import Data.Aeson
 import Data.Maybe
 import qualified Data.ByteString.Lazy.Char8 as LBS8
 
-getProblem :: IO Problem
+getProblem :: IO TrainingResponse
 getProblem = do
-  str <- getTrainingProblem (Just 8) Nothing
-  return $ fromMaybe (error "getProblem") $ decode $ LBS8.pack str
+  getTrainingProblem (Just 8) Nothing
 
 progs :: [Exp]
 progs = list 7 series
 
 main = do
   p <- getProblem
-  str <- evalProgramById (problemId p) bvs
+  str <- evalProgramById (trainingId p) bvs
   putStrLn str
 
   {-

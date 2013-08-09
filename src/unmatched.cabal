@@ -41,7 +41,8 @@ library
                   , RandomBV
                   , Filter
                   , PP
-                  , HttpClient
+                  , HsClient
+                  , StringClient
                   , URLs
 
 executable client

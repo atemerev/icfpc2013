@@ -1,7 +1,7 @@
 module Main where
 
 import System.Environment
-import HttpClient (getMyproblems, getStatus, getAnyTrainingProblem, evalProgram, guessProgram)
+import StringClient (getMyproblems, getStatus, getAnyTrainingProblem, evalProgram, guessProgram)
 import Options.Applicative
 
 data Cmd = MyProblems

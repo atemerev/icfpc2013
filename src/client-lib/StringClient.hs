@@ -1,11 +1,11 @@
-module HttpClient ( getMyproblems
-                 , getStatus
-                 , evalProgram
-                 , evalProgramById
-                 , guessProgram
-                 , getTrainingProblem
-                 , getAnyTrainingProblem -- no size/ops limit
-                 ) where
+module StringClient ( getMyproblems
+                    , getStatus
+                    , evalProgram
+                    , evalProgramById
+                    , guessProgram
+                    , getTrainingProblem
+                    , getAnyTrainingProblem -- no size/ops limit
+                    ) where
 
 import qualified URLs
 import ServerAPI
