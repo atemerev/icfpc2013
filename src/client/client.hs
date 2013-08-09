@@ -58,7 +58,7 @@ run (FindSolvable fname tmout) = do
         Nothing -> return () -- putStrLn ("skipping " ++ problemId p ++ " - timed out")
         Just () -> pp (p, generateRestricted (problemSize p) (operators p))
       tryGen ps
-    pp (p, sz) = putStrLn $ (printf "%s|%d|%s|%d" (problemId p) (problemSize p) (intercalate " " $ operators p) sz)
+    pp (p, exps) = putStrLn $ (printf "%s|%d|%s|%d" (problemId p) (problemSize p) (intercalate " " $ operators p) (length exps))
 
 run (TrainSolve size) = do
   p <- HC.getTrainingProblem (Just size) Nothing
