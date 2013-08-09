@@ -22,7 +22,7 @@ wrap fname stringClient = do
 getMyproblems :: IO [Problem]
 getMyproblems = wrap "myproblems" $ SC.getMyproblems
 
-getUnsolved = getMyproblems >>= return . filter (isNothing.solved)
+getUnsolved = getMyproblems >>= return . filter isUnsolved
 -- getStatus               = wrap $ SC.getStatus
 
 evalProgram     :: String -> [Word64] -> IO EvalResponse

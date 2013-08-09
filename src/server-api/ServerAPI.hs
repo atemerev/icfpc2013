@@ -8,6 +8,7 @@ import qualified Data.Vector as V
 import Data.Text (Text)
 import Data.Word
 import Text.Printf (printf)
+import Data.Maybe
 
 data Problem = Problem { problemId :: String
                        , problemSize :: Int
@@ -15,6 +16,8 @@ data Problem = Problem { problemId :: String
                        , solved :: Maybe Bool
                        , timeLeft :: Maybe Double
                        } deriving Show
+
+isUnsolved p = isNothing (solved p) || ( (solved p) == Just False && fromMaybe 0.0 (timeLeft p) > 0.0)
 
 data ProgramOrId = Program String | ID String deriving Show
 data EvalRequest = EvalRequest { programOrId :: ProgramOrId

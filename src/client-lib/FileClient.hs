@@ -19,7 +19,7 @@ getMyproblems fname = getMyproblemsHS fname >>= asString
 
 getUnsolvedHS fname = do
   pblms <- getMyproblemsHS fname
-  return $ filter (isNothing.solved) pblms
+  return $ filter isUnsolved pblms
   
 getUnsolved fname = getUnsolvedHS fname >>= asString
 
