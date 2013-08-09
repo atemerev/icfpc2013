@@ -61,6 +61,13 @@ executable client
                   , smallcheck
                   , containers
 
+executable benchmark
+  hs-source-dirs:  ./test
+  main-is: benchmark.hs
+  build-depends:    base == 4.6.*
+                  , unmatched
+                  , smallcheck
+
 test-suite test
   type: exitcode-stdio-1.0
   hs-source-dirs: test
