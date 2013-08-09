@@ -38,7 +38,7 @@ eval main fold1 fold2 e = eval' e
         ; MainArg -> main
         ; Fold1Arg -> fold1
         ; Fold2Arg -> fold2
-        ; If c t f -> if eval' c == 0  -- TODO: Maybe /= 0, need to check.
+        ; If c t f -> if eval' c == 0
                       then eval' t
                       else eval' f
         ; Not e -> complement (eval' e)
