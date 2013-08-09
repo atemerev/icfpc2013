@@ -35,6 +35,7 @@ library
                   , pretty            >= 1.1.1
                   , bytestring        >= 0.10
                   , pretty
+                  , containers
 
   hs-source-dirs:   server-api, solver-lib, client-lib
   exposed-modules:  ServerAPI
