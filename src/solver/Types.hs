@@ -1,5 +1,10 @@
 {-# LANGUAGE GADTs, FlexibleInstances, MultiParamTypeClasses #-}
-module Types where
+module Types
+  ( Exp(..)
+  , Word64
+  , eval
+  )
+  where
 
 import Data.Word
 import Data.Bits
