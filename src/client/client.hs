@@ -56,7 +56,7 @@ run (FindSolvable fname tmout) = do
       res <- isFeasible tmout p
       _ <- case res of  
         Nothing -> return () -- putStrLn ("skipping " ++ problemId p ++ " - timed out")
-        Just rs -> pp rs
+        Just () -> pp (p, generateRestricted (problemSize p) (operators p))
       tryGen ps
     pp (p, exps) = putStrLn $ (printf "%s|%d|%s|%d" (problemId p) (problemSize p) (intercalate " " $ operators p) (length exps))
 
@@ -85,7 +85,7 @@ run (SolveMany offset limit tmout) = do
       res <- isFeasible tmout p
       _ <- case res of  
         Nothing -> putStrLn ("  skipping " ++ problemId p ++ " - timed out")
-        Just (p,expressions) -> solve' (problemId p) expressions
+        Just () -> solve' (problemId p) (generateRestricted (problemSize p) (operators p))
       trySolve ps
 
 options = info (clientOptions <**> helper) idm
