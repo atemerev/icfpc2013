@@ -12,7 +12,7 @@ getProblem = do
   getTrainingProblem (Just 8) Nothing
 
 progs :: [Exp]
-progs = list 8 series
+progs = list 8 serProg
 
 main = do
   p <- getProblem

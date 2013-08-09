@@ -3,6 +3,7 @@ module Types
   ( Exp(..)
   , Word64
   , eval
+  , serProg
   )
   where
 
