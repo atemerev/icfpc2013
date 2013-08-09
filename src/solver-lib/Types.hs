@@ -82,6 +82,10 @@ data FoldState = NoFold -- Allowed to generate unrestricted expression except re
                | InFoldBody -- Allowed to generate references to fold args but not folds
                deriving (Eq, Show)
 
+-- Names of the operations that we are allowed to use while generating
+data OpName = If_op | Not_op | Shl1_op | Shr1_op | Shr4_op | Shr16_op | And_op | Or_op | Xor_op | Plus_op | Fold_op | TFold_op
+type Restriction = [OpName]
+
 oneof :: (Monad m) => [Series m a] -> Series m a
 oneof xs = foldr mplus mzero xs
 
@@ -131,26 +135,25 @@ serBinop n fs op = do
   (b, foldB) <- serExp' sizeB (if foldA then ExternalFold else fs)
   return (op a b, foldA || foldB)
 
-progSize :: Exp -> Int
-progSize e = expSize e + 1
-
 expSize :: Exp -> Int
-expSize Zero = 1
-expSize One = 1
-expSize MainArg = 1
-expSize Fold1Arg = 1
-expSize Fold2Arg = 1
-expSize (If a b c) = 1 + expSize a + expSize b + expSize c
-expSize (Fold a b c) = 2 + expSize a + expSize b + expSize c
-expSize (Not a) = 1 + expSize a
-expSize (Shl1 a) = 1 + expSize a
-expSize (Shr1 a) = 1 + expSize a
-expSize (Shr4 a) = 1 + expSize a
-expSize (Shr16 a) = 1 + expSize a
-expSize (And a b) = 1 + expSize a + expSize b
-expSize (Or a b) = 1 + expSize a + expSize b
-expSize (Xor a b) = 1 + expSize a + expSize b
-expSize (Plus a b) = 1 + expSize a + expSize b
+expSize e = expSize' e + 1 -- 1 for the top-level lambda
+  where
+    expSize' Zero = 1
+    expSize' One = 1
+    expSize' MainArg = 1
+    expSize' Fold1Arg = 1
+    expSize' Fold2Arg = 1
+    expSize' (If a b c) = 1 + expSize a + expSize b + expSize c
+    expSize' (Fold a b c) = 2 + expSize a + expSize b + expSize c
+    expSize' (Not a) = 1 + expSize a
+    expSize' (Shl1 a) = 1 + expSize a
+    expSize' (Shr1 a) = 1 + expSize a
+    expSize' (Shr4 a) = 1 + expSize a
+    expSize' (Shr16 a) = 1 + expSize a
+    expSize' (And a b) = 1 + expSize a + expSize b
+    expSize' (Or a b) = 1 + expSize a + expSize b
+    expSize' (Xor a b) = 1 + expSize a + expSize b
+    expSize' (Plus a b) = 1 + expSize a + expSize b
 
 isValid :: Exp -> Bool
 isValid e = noBrokenRefs e && (numFolds e <= 1)
@@ -197,9 +200,8 @@ allExpsAreValid = smallCheck 6 $ \n ->
 allExpsAreSpecifiedSize =
   smallCheck 6 $ \n ->
   over (generate $ \_ -> list n serProg) $ \prog ->
-    progSize prog == n
+    expSize prog == n
 
 -- names of the ops for limiting sets of possible ops
--- data OpName = If_op | Not_op | Shl1_op | Shr1_op | Shr4_op | Shr16_op | And_op | Or_op | Xor_op | Plus_op
 
 -- data RestrictedExp = RExp { exp::Exp, foldState::FoldState, ops::[OpName] }
