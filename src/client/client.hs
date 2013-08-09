@@ -2,14 +2,15 @@ module Main where
 
 import System.Environment
 import Options.Applicative
-import ServerAPI (OpLimit(..),Problem(..))
+import ServerAPI (OpLimit(..),Problem(..), TrainingResponse(..))
 import StringClient as SC (getMyproblems, getStatus, getTrainingProblem, evalProgram, evalProgramById, guessProgram)
 import FileClient as FC (getUnsolved, getUnsolvedHS)
+import HsClient as HC (getTrainingProblem)
 import Gen
 import Data.List (isInfixOf, intercalate)
-import System.Timeout
-import Control.Exception (evaluate)
 import Text.Printf
+import System.IO
+import Solve (solve, isFeasible)
 
 data Cmd = MyProblems
          | Status
@@ -19,12 +20,16 @@ data Cmd = MyProblems
          | Generate Int [String]
          | Unsolved String
          | FindSolvable String Int
-
-main = execParser options >>= run
+         | TrainSolve Int
+         | Solve String String
+           
+main = do
+  hSetBuffering stdout NoBuffering
+  execParser options >>= run
 
 run MyProblems = putStrLn =<< SC.getMyproblems
 run Status = putStrLn =<< getStatus
-run (Train length oplimit) = putStrLn =<< getTrainingProblem length oplimit
+run (Train length oplimit) = putStrLn =<< SC.getTrainingProblem length oplimit
 run (Eval programOrId args) = 
   if " " `isInfixOf` programOrId
   then putStrLn =<< evalProgram     programOrId (map read args)
@@ -37,21 +42,19 @@ run (FindSolvable fname tmout) = do
   tryGen problems
   where
     tryGen [] =  return ()
-    tryGen (p:ps) 
-      | problemSize p >= 16 = do  -- TODO
-        -- putStrLn ("skipping " ++ problemId p ++ " - too large")
-        tryGen ps
-      | otherwise = do
-      res <- timeout (tmout * 10^6) $ do
-        let gen = generateRestricted (problemSize p) (operators p)
-        let lgen = length gen
-        evaluate lgen
-        return (p, lgen)
+    tryGen (p:ps) = do
+      res <- isFeasible tmout p
       _ <- case res of  
         Nothing -> return () -- putStrLn ("skipping " ++ problemId p ++ " - timed out")
         Just rs -> pp rs
       tryGen ps
     pp (p, sz) = putStrLn $ (printf "%s|%d|%s|%d" (problemId p) (problemSize p) (intercalate " " $ operators p) sz)
+run (TrainSolve size) = do
+  p <- HC.getTrainingProblem (Just size) Nothing
+  let progId = (trainingId p)
+  print p
+  solve (trainingId p) size (trainingOps p)
+
 
 options = info (clientOptions <**> helper) idm
 
@@ -81,6 +84,12 @@ clientOptions =
   <> command "find-solvable"
     (info findSolvable
      (progDesc "Find list of problems solvable by brute-force within N seconds"))
+  <> command "train-solve"
+    (info trainSolve
+     (progDesc "Solve the new training task of the given size"))
+  <> command "solve"
+    (info realSolve
+     (progDesc "Solve the REAL tasks with given ID"))
   )
 
 train = Train <$> (fmap read <$> ( optional $ strOption (metavar "LENGTH" <> short 'l' <> long "length")))
@@ -99,3 +108,8 @@ unsolved = Unsolved <$> argument str (metavar "FILE")
 
 findSolvable = FindSolvable <$> argument str (metavar "FILE")
                             <*> (read <$> argument str (metavar "TIMEOUT"))
+
+trainSolve = TrainSolve <$> (read <$> argument str (metavar "SIZE"))
+
+realSolve = Solve <$> argument str (metavar "FILE")
+                  <*> argument str (metavar "ID")
