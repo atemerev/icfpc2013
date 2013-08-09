@@ -12,10 +12,11 @@ import System.Timeout
 
 solve :: String -> Int -> [String] -> IO ()
 solve progId size operations = do
-  EvalOK outputs <- evalProgramById progId bvs -- TODO
-  -- print outputs
-  loop progId bvs outputs allProgs
-  
+  evalRes <- evalProgramById progId bvs
+  case evalRes of
+    EvalOK outputs -> loop progId bvs outputs allProgs
+    EvalError msg -> error $ "evalProgramById returned error:" ++ show msg
+
   where 
     allProgs = generateRestricted size operations
 

@@ -7,7 +7,7 @@ import StringClient as SC (getMyproblems, getStatus, getTrainingProblem, evalPro
 import FileClient as FC (getUnsolved, getUnsolvedHS)
 import HsClient as HC (getTrainingProblem)
 import Gen
-import Data.List (isInfixOf, intercalate)
+import Data.List (isInfixOf, intercalate, find)
 import Text.Printf
 import System.IO
 import Solve (solve, isFeasible)
@@ -21,7 +21,7 @@ data Cmd = MyProblems
          | Unsolved String
          | FindSolvable String Int
          | TrainSolve Int
-         | Solve String String
+         | Solve String Int String
            
 main = do
   hSetBuffering stdout NoBuffering
@@ -54,7 +54,15 @@ run (TrainSolve size) = do
   let progId = (trainingId p)
   print p
   solve (trainingId p) size (trainingOps p)
-
+run (Solve fname tmout id) = do
+  problems <- FC.getUnsolvedHS fname
+  case find ((==id).problemId) problems of
+    Nothing -> error "No unsolved problems with this ID"
+    Just p -> do 
+      feasible <- isFeasible tmout p
+      case feasible of  
+        Nothing -> error "Not feasible to solve this problem"
+        Just _ -> solve (problemId p) (problemSize p) (operators p)
 
 options = info (clientOptions <**> helper) idm
 
@@ -112,4 +120,5 @@ findSolvable = FindSolvable <$> argument str (metavar "FILE")
 trainSolve = TrainSolve <$> (read <$> argument str (metavar "SIZE"))
 
 realSolve = Solve <$> argument str (metavar "FILE")
+                  <*> (read <$> argument str (metavar "TIMEOUT"))
                   <*> argument str (metavar "ID")
