@@ -91,7 +91,7 @@ instance FromJSON Guess where
 
 instance ToJSON Guess where
   toJSON p = object ([ "id" .= guessProblemId p
-                     , "program" .= guessProgram p
+                     , "program" .= guessProgramText p
                      ])
 
 instance FromJSON GuessResponse where
@@ -106,17 +106,20 @@ instance ToJSON GuessResponse where
                      .=? ("message", guessMessage p)
                      )
 
+responseToString rsp = do
+  rspCode <- getResponseCode rsp
+  case rspCode of
+    -- lamely ensure that we haven't got errors
+    (2,0,0) -> getResponseBody rsp
+    (x,y,z) -> error $ "HTTP response " ++ show (x*100+y*10+z)
+  
 arglessRequest url = do
   rsp <- Network.HTTP.simpleHTTP (getRequest url)
-         -- fetch document and return it (as a 'String'.)
-  (2,0,0) <- getResponseCode rsp -- lamely ensure that we haven't got errors
-  getResponseBody rsp
-
+  responseToString rsp
+  
 postRequest url body = do
   rsp <- Network.HTTP.simpleHTTP (postRequestWithBody url "text/json" (BS.unpack (encode body)))
-         -- fetch document and return it (as a 'String'.)
-  (2,0,0) <- getResponseCode rsp -- lamely ensure that we haven't got errors
-  getResponseBody rsp
+  responseToString rsp
   
 ----------------------
 -- 1. Getting problems
@@ -135,9 +138,6 @@ evalProgram pgm vals     = postRequest URLs.eval (EvalRequest (Program pgm) vals
 
 ------------------------
 -- 3. Submitting guesses
-instance ToJSON Guess where
-  toJSON (Guess id pgm) = object [ "id" .= id, "program" .= pgm ] 
-  
 guessProgram id pgm = postRequest URLs.guess (Guess id pgm)
 
 --------------
