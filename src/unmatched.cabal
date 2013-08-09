@@ -26,10 +26,12 @@ executable fake-server
                   , warp              >= 1.3
                   , unmatched
 
-  extensions:     OverloadedStrings
+  extensions:       OverloadedStrings
 
 library
   build-depends:    aeson             >= 0.6
                   , base              == 4.6.*
+
   hs-source-dirs:   server-api
   exposed-modules:  ServerAPI
+  extensions:       OverloadedStrings
