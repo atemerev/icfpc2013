@@ -4,7 +4,7 @@ import Test.Tasty.HUnit
 import Test.Tasty.SmallCheck
 
 import Types
-import Gen (serProg)
+import Gen (serProg, noRestriction)
 
 main = defaultMain allTests
 
@@ -14,10 +14,10 @@ allTests = testGroup "Tests"
 generatorTests = localOption (SmallCheckDepth 7) $ testGroup "Generation"
   [ testProperty "Programs have correct size" $
       \n -> changeDepth (const n) $
-        over serProg $ \prog -> progSize prog == n
+        over (serProg noRestriction) $ \prog -> progSize prog == n
   , testProperty "Programs are valid" $
       \n -> changeDepth (const n) $
-        over serProg isValid
+        over (serProg noRestriction) isValid
   ]
 
 evalTests = testGroup "Evaluation" $

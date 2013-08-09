@@ -1,4 +1,4 @@
-module Gen (generateRestricted, serProg) where
+module Gen (generateRestricted, serProg, noRestriction) where
 
 import Types
 import Test.SmallCheck
@@ -41,6 +41,7 @@ generateRestricted' tfold n restriction =
 -- Generators are restricted to allowed function set
 data OpName = Not_op | Shl1_op | Shr1_op | Shr4_op | Shr16_op | And_op | Or_op | Xor_op | Plus_op | If_op | Fold_op deriving (Eq, Ord)
 type Restriction = S.Set OpName
+noRestriction = S.fromList [Not_op, Shl1_op, Shr1_op, Shr4_op, Shr16_op, And_op, Or_op, Xor_op, Plus_op, If_op, Fold_op]
 
 allow restriction opName f =
   if opName `S.member` restriction then Just f else Nothing
