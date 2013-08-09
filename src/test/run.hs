@@ -37,6 +37,12 @@ evalTests = testGroup "Evaluation" $
       ev (Shr4 MainArg)  0xFFFFFFFFFFFFFFFF @?= 0x0FFFFFFFFFFFFFFF
   , testCase "Shr16" $
       ev (Shr16 MainArg) 0xFFFFFFFFFFFFFFFF @?= 0x0000FFFFFFFFFFFF
+  , testCase "Plus" $
+      ev (Plus MainArg MainArg) 0xFFFFFFFFFFFFFFFF @?= 0xFFFFFFFFFFFFFFFE
+  , testCase "Fold (commutative)" $
+      ev (Fold MainArg Zero (Plus Fold1Arg Fold2Arg)) 0x110318FF1609AA98 @?= 652
+  , testCase "Fold (non-commutative)" $
+      ev (Fold MainArg Zero (Plus (Shl1 Fold1Arg) Fold2Arg)) 0x110318FF1609AA98 @?= 1304
   ]
 
   where
