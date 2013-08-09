@@ -1,10 +1,13 @@
-module Gen (serProg) where
+module Gen (generateAll) where
 
 import Types
 import Test.SmallCheck
 import Test.SmallCheck.Series
 import Control.Applicative
 import Control.Monad
+
+generateAll :: Int -> [Exp]
+generateAll n = list n serProg
 
 serProg :: Monad m => Series m Exp
 serProg = decDepth serExp

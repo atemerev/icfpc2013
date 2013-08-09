@@ -1,4 +1,3 @@
-import Test.SmallCheck.Series
 import Types
 import Gen
 import HsClient
@@ -13,7 +12,7 @@ getProblem = do
   getTrainingProblem (Just 8) Nothing
 
 progs :: [Exp]
-progs = list 8 serProg
+progs = generateAll 8
 
 main = do
   p <- getProblem
