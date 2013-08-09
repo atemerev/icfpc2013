@@ -38,17 +38,18 @@ library
                   , bytestring        >= 0.10
                   , pretty
 
-  hs-source-dirs:   server-api, solver
+  hs-source-dirs:   server-api, solver, client-lib
   exposed-modules:  ServerAPI
                   , Types
                   , RandomBV
                   , Filter
                   , PP
+                  , HttpClient
+                  , URLs
 
 executable client
   hs-source-dirs:  ./client
   main-is: client.hs
-  other-modules:  HttpClient, URLs
   build-depends:    base == 4.6.*
                   , HTTP
                   , unmatched
