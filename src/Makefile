@@ -15,5 +15,5 @@ clean:
 	rm -rf dist
 
 $(CONFIG): unmatched.cabal
-	cabal configure
+	cabal configure --enable-tests
 
