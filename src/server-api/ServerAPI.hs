@@ -1,14 +1,17 @@
 {-# LANGUAGE OverloadedStrings #-}
 module ServerAPI ( getMyproblems
                  , getStatus
+                 , getTrainingProblem
+                 , getAnyTrainingProblem -- no size/ops limit
                  ) where
 
 import Control.Applicative
 import Data.Aeson
 import qualified Data.Vector as V
-import Network.HTTP
+import Network.HTTP hiding (postRequest)
 import qualified URLs
 import Data.Word
+import Data.ByteString.Lazy.Char8 as BS hiding (map)
 
 data Problem = Problem { problemId :: String
                        , problemSize :: Int
@@ -72,6 +75,12 @@ arglessRequest url = do
   (2,0,0) <- getResponseCode rsp -- lamely ensure that we haven't got errors
   getResponseBody rsp
 
+postRequest url body = do
+  rsp <- Network.HTTP.simpleHTTP (postRequestWithBody url "text/json" (BS.unpack (encode body)))
+         -- fetch document and return it (as a 'String'.)
+  (2,0,0) <- getResponseCode rsp -- lamely ensure that we haven't got errors
+  getResponseBody rsp
+  
 ----------------------
 -- 1. Getting problems
 getMyproblems = arglessRequest URLs.myproblems
@@ -84,10 +93,10 @@ getMyproblems = arglessRequest URLs.myproblems
 -- From IRC: 
 -- <ArchVince> with fold anything under 11 fails for me
 -- <ArchVince> with tfold anything under 8
-data OpLimit = NoFolds | Fold | TFold
+data OpLimit = NoFolds | Fold | TFold deriving Show
 data TrainingReq = TrainingReq { size :: Maybe Int
                                , opLimit :: Maybe OpLimit
-                               }
+                               } deriving Show
 
 array lst = Array $ V.fromList lst
 
@@ -95,6 +104,14 @@ instance ToJSON OpLimit where
   toJSON NoFolds = array []
   toJSON Fold    = array ["fold"]
   toJSON TFold   = array ["tfold"]
+  
+instance ToJSON TrainingReq where
+  toJSON (TrainingReq sz op) = object [ "size" .= sz, "operators" .= op ]
+  
+getTrainingProblem sz oplimit = 
+  postRequest URLs.train (TrainingReq sz oplimit)
+
+getAnyTrainingProblem = getTrainingProblem Nothing Nothing
 ------------
 -- 5. Status
 getStatus = arglessRequest URLs.status

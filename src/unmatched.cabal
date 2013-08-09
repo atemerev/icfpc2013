@@ -34,6 +34,7 @@ library
                   , HTTP
                   , smallcheck
                   , vector            >= 0.10
+                  , bytestring        >= 0.10
 
   hs-source-dirs:   server-api, solver
   exposed-modules:  ServerAPI
