@@ -1,22 +1,12 @@
 {-# LANGUAGE OverloadedStrings #-}
-module ServerAPI ( getMyproblems
-                 , getStatus
-                 , evalProgram
-                 , evalProgramById
-                 , guessProgram
-                 , getTrainingProblem
-                 , getAnyTrainingProblem -- no size/ops limit
-                 ) where
+module ServerAPI where
 
 import Control.Applicative
 import Data.Aeson
 import Data.Aeson.Types (Pair)
 import qualified Data.Vector as V
-import Network.HTTP hiding (postRequest)
-import qualified URLs
 import Data.Text (Text)
 import Data.Word
-import Data.ByteString.Lazy.Char8 as BS hiding (map)
 import Text.Printf (printf)
 
 data Problem = Problem { problemId :: String
@@ -45,6 +35,20 @@ data GuessResponse = GuessResponse { guessStatus :: String
                                    , guessMessage :: Maybe String
                                    } deriving Show
 
+data OpLimit = NoFolds | Fold | TFold deriving Show
+data TrainingRequest = TrainingRequest { size :: Maybe Int
+                                       , opLimit :: Maybe OpLimit
+                                       } deriving Show
+
+array lst = Array $ V.fromList lst
+instance ToJSON OpLimit where
+  toJSON NoFolds = array []
+  toJSON Fold    = array ["fold"]
+  toJSON TFold   = array ["tfold"]
+  
+instance ToJSON TrainingRequest where
+  toJSON (TrainingRequest sz op) = object [ "size" .= sz, "operators" .= op ]
+  
 fromHex :: String -> Word64
 fromHex = read
 
@@ -71,6 +75,12 @@ instance ToJSON Problem where
                      .=? ("solved", solved p)
                      .=? ("timeLeft", timeLeft p)
                      )
+
+instance ToJSON EvalRequest where
+  toJSON (EvalRequest pgmOrId vals) = 
+    case pgmOrId of
+      Program pgm -> object [ "program" .= pgm, "arguments" .= vals ]
+      ID id       -> object [ "id" .= id, "arguments" .= vals ]
 
 instance FromJSON EvalResponse where
   parseJSON (Object v) = EvalResponse <$>
@@ -105,66 +115,4 @@ instance ToJSON GuessResponse where
                      .=? ("values", guessValues p)
                      .=? ("message", guessMessage p)
                      )
-
-responseToString rsp = do
-  rspCode <- getResponseCode rsp
-  case rspCode of
-    -- lamely ensure that we haven't got errors
-    (2,0,0) -> getResponseBody rsp
-    (x,y,z) -> error $ "HTTP response " ++ show (x*100+y*10+z)
-  
-arglessRequest url = do
-  rsp <- Network.HTTP.simpleHTTP (getRequest url)
-  responseToString rsp
-  
-postRequest url body = do
-  rsp <- Network.HTTP.simpleHTTP (postRequestWithBody url "text/json" (BS.unpack (encode body)))
-  responseToString rsp
-  
-----------------------
--- 1. Getting problems
-getMyproblems = arglessRequest URLs.myproblems
-  
--------------------------
--- 2. Evaluating programs
-instance ToJSON EvalRequest where
-  toJSON (EvalRequest pgmOrId vals) = 
-    case pgmOrId of
-      Program pgm -> object [ "program" .= pgm, "arguments" .= vals ]
-      ID id       -> object [ "id" .= id, "arguments" .= vals ]
-
-evalProgramById id vals  = postRequest URLs.eval (EvalRequest (ID id) vals)
-evalProgram pgm vals     = postRequest URLs.eval (EvalRequest (Program pgm) vals)
-
-------------------------
--- 3. Submitting guesses
-guessProgram id pgm = postRequest URLs.guess (Guess id pgm)
-
---------------
--- 4. Training
--- From IRC: 
--- <ArchVince> with fold anything under 11 fails for me
--- <ArchVince> with tfold anything under 8
-data OpLimit = NoFolds | Fold | TFold deriving Show
-data TrainingReq = TrainingReq { size :: Maybe Int
-                               , opLimit :: Maybe OpLimit
-                               } deriving Show
-
-array lst = Array $ V.fromList lst
-
-instance ToJSON OpLimit where
-  toJSON NoFolds = array []
-  toJSON Fold    = array ["fold"]
-  toJSON TFold   = array ["tfold"]
-  
-instance ToJSON TrainingReq where
-  toJSON (TrainingReq sz op) = object [ "size" .= sz, "operators" .= op ]
-  
-getTrainingProblem sz oplimit = 
-  postRequest URLs.train (TrainingReq sz oplimit)
-
-getAnyTrainingProblem = getTrainingProblem Nothing Nothing
-------------
--- 5. Status
-getStatus = arglessRequest URLs.status
 

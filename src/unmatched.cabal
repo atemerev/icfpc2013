@@ -42,10 +42,13 @@ library
                   , Types
                   , RandomBV
                   , Filter
-  other-modules:    URLs
 
-executable server
-  main-is: server-api/Server.hs
+executable client
+  hs-source-dirs:  ./client
+  main-is: client.hs
+  other-modules:  HttpClient, URLs
   build-depends:    base == 4.6.*
                   , HTTP
                   , unmatched
+                  , aeson             >= 0.6
+                  , bytestring        >= 0.10

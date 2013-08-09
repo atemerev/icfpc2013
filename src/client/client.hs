@@ -1,7 +1,7 @@
 module Main where
 
 import System.Environment
-import ServerAPI (getMyproblems, getStatus, getAnyTrainingProblem, evalProgram, guessProgram)
+import HttpClient (getMyproblems, getStatus, getAnyTrainingProblem, evalProgram, guessProgram)
 
 main = do
   args <- getArgs
