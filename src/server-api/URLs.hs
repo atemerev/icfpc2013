@@ -9,4 +9,5 @@ myproblems = mkURL "myproblems"
 train = mkURL "train"
 eval = mkURL "eval"
 guess = mkURL "guess"
+status = mkURL "status"
 
