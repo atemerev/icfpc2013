@@ -3,6 +3,7 @@ module Types
   ( Exp(..)
   , Word64
   , eval
+  , isConstExpr
   )
   where
 
@@ -29,6 +30,23 @@ data Exp where
   Xor :: Exp -> Exp -> Exp
   Plus :: Exp -> Exp -> Exp
   deriving (Eq, Ord, Show, Data, Typeable)
+
+isConstExpr Zero = True
+isConstExpr One = True
+isConstExpr MainArg = False
+isConstExpr Fold1Arg = True
+isConstExpr Fold2Arg = True
+isConstExpr (If a b c) = isConstExpr a && isConstExpr b && isConstExpr c
+isConstExpr (Fold a b c) = isConstExpr a && isConstExpr b && isConstExpr c
+isConstExpr (Not a) = isConstExpr a
+isConstExpr (Shl1 a) = isConstExpr a
+isConstExpr (Shr1 a) = isConstExpr a
+isConstExpr (Shr4 a) = isConstExpr a
+isConstExpr (Shr16 a) = isConstExpr a
+isConstExpr (And a b) = isConstExpr a && isConstExpr b
+isConstExpr (Or a b) = isConstExpr a && isConstExpr b
+isConstExpr (Xor a b) = isConstExpr a && isConstExpr b
+isConstExpr (Plus a b) = isConstExpr a && isConstExpr b
 
 eval :: Word64 -> Word64 -> Word64 -> Exp -> Word64
 eval main fold1 fold2 e = eval' e

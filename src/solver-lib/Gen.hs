@@ -138,9 +138,12 @@ serIf n restriction fs = do
   sizeB <- elements [1..n - 2 - sizeA]
   let sizeC = n - 1 - sizeA - sizeB
   (a, foldA) <- serExp' sizeA restriction fs
-  (b, foldB) <- serExp' sizeB restriction (if foldA then ExternalFold else fs)
-  (c, foldC) <- serExp' sizeC restriction (if (foldA || foldB) then ExternalFold else fs)
-  return (If a b c, foldA || foldB || foldC)
+  if isConstExpr a
+    then mzero
+    else do
+      (b, foldB) <- serExp' sizeB restriction (if foldA then ExternalFold else fs)
+      (c, foldC) <- serExp' sizeC restriction (if (foldA || foldB) then ExternalFold else fs)
+      return (If a b c, foldA || foldB || foldC)
 
 serFold :: (Monad m, ?tfold :: Bool) => Int -> Restriction -> Series m (Exp, Bool)
 serFold n restriction = do
