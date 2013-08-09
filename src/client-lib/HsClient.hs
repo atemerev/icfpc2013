@@ -13,16 +13,16 @@ import Data.Aeson
 import Data.Maybe (fromMaybe)
 import ServerAPI
 
-wrap stringClient = do
+wrap fname stringClient = do
   response <- stringClient
-  return $ fromMaybe (error $ "decode failed on "++response) $ decode $ BS.pack response
+  return $ fromMaybe (error $ fname ++ ": decode failed on "++response) $ decode $ BS.pack response
   
 -- getMyproblems           = wrap $ SC.getMyproblems
 -- getStatus               = wrap $ SC.getStatus
-evalProgram pgm args    = wrap $ SC.evalProgram pgm args
-evalProgramById id args = wrap $ SC.evalProgramById id args
-guessProgram id pgm     = wrap $ SC.guessProgram id pgm
-getTrainingProblem s o  = wrap $ SC.getTrainingProblem s o
+evalProgram pgm args    = wrap "evalProgram"        $ SC.evalProgram pgm args
+evalProgramById id args = wrap "evalProgramById"    $ SC.evalProgramById id args
+guessProgram id pgm     = wrap "guessProgram"       $ SC.guessProgram id pgm
+getTrainingProblem s o  = wrap "getTrainingProblem" $ SC.getTrainingProblem s o
 
 getAnyTrainingProblem :: IO TrainingResponse
-getAnyTrainingProblem   = wrap $ SC.getAnyTrainingProblem
+getAnyTrainingProblem = wrap "getAnyTrainingProblem" $ SC.getAnyTrainingProblem
