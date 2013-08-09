@@ -110,7 +110,7 @@ clientOptions =
   <> command "solve"
     (info realSolve
      (progDesc "Solve the REAL tasks with given ID"))
-  <> command "filter"
+  <> command "filter-out"
     (info filterProblems
      (progDesc "Filter out tasks with given IDs"))
   )
