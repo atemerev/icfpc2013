@@ -1,9 +1,10 @@
 module Main where
 
 import System.Environment
-import StringClient (getMyproblems, getStatus, getTrainingProblem, evalProgram, guessProgram)
+import StringClient (getMyproblems, getStatus, getTrainingProblem, evalProgram, evalProgramById, guessProgram)
 import Options.Applicative
 import ServerAPI (OpLimit(..))
+import Data.List (isInfixOf)
 
 data Cmd = MyProblems
          | Status
@@ -16,7 +17,10 @@ main = execParser options >>= run
 run MyProblems = putStrLn =<< getMyproblems
 run Status = putStrLn =<< getStatus
 run (Train length oplimit) = putStrLn =<< getTrainingProblem length oplimit -- TODO: add args
-run (Eval program args) =  putStrLn =<< evalProgram program (map read args) -- TODO: add args
+run (Eval programOrId args) = 
+  if " " `isInfixOf` programOrId
+  then putStrLn =<< evalProgram     programOrId (map read args) -- TODO: add args
+  else putStrLn =<< evalProgramById programOrId (map read args) -- TODO: add args 
 run (Guess id program) = putStrLn =<< guessProgram id program -- TODO: add args
 
 options = info (clientOptions <**> helper) idm
@@ -43,7 +47,7 @@ clientOptions =
 train = Train <$> (fmap read <$> ( optional $ strOption (metavar "LENGTH" <> short 'l' <> long "length")))
               <*> (fmap read <$> ( optional $ strOption (metavar "NoFold|Fold|TFold" <> short 'o' <> long "ops")))
         
-eval = Eval <$> argument str (metavar "PROGRAM")
+eval = Eval <$> argument str (metavar "PROGRAM or ID")
             <*> arguments1 str (metavar "ARG1 [ARG2 .. ARG_n]")
 
 guess = Guess <$> argument str (metavar "ID")
