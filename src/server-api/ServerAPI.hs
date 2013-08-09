@@ -37,7 +37,7 @@ data GuessResponse = Win
                    | GuessError { guessMessage :: String }
                    deriving Show
 
-data OpLimit = NoFolds | Fold | TFold deriving Show
+data OpLimit = NoFolds | Fold | TFold deriving (Read, Show)
 data TrainingRequest = TrainingRequest { size :: Maybe Int
                                        , opLimit :: Maybe OpLimit
                                        } deriving Show
