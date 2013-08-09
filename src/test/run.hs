@@ -1,10 +1,16 @@
+{-# LANGUAGE ViewPatterns #-}
 import Test.Tasty
 import Test.Tasty.Options
 import Test.Tasty.HUnit
 import Test.Tasty.SmallCheck
+import Test.SmallCheck.Series
+
+import qualified Data.Set as S
+import Data.Generics.Uniplate.Data
+import Control.Monad
 
 import Types
-import Gen (serProg, noRestriction)
+import Gen
 
 main = defaultMain allTests
 
@@ -18,6 +24,13 @@ generatorTests = localOption (SmallCheckDepth 7) $ testGroup "Generation"
   , testProperty "Programs are valid" $
       \n -> changeDepth (const n) $
         over (serProg noRestriction) isValid
+  , localOption (SmallCheckDepth 5) $ testProperty "Operator restrictions" $
+      \n ->
+      over restrictionSeries $ \(S.fromList -> restriction) ->
+
+      S.fromList (filter (checkRestriction restriction)
+        (list n (serProg noRestriction)))
+        == S.fromList (list n (serProg restriction))
   ]
 
 evalTests = testGroup "Evaluation" $
@@ -108,3 +121,29 @@ isValid e = noBrokenRefs e && (numFolds e <= 1)
     noBrokenRefs (Or a b) = noBrokenRefs a && noBrokenRefs b
     noBrokenRefs (Xor a b) = noBrokenRefs a && noBrokenRefs b
     noBrokenRefs (Plus a b) = noBrokenRefs a && noBrokenRefs b
+
+expOps :: Exp -> S.Set OpName
+expOps = S.unions . map nodeToOp . universe
+  where
+    nodeToOp e =
+      case e of
+        Not {} -> S.singleton Not_op
+        Shl1 {} -> S.singleton Shl1_op
+        Shr1 {} -> S.singleton Shr1_op
+        Shr4 {} -> S.singleton Shr4_op
+        Shr16 {} -> S.singleton Shr16_op
+        And {} -> S.singleton And_op
+        Or {} -> S.singleton Or_op
+        Xor {} -> S.singleton Xor_op
+        Plus {} -> S.singleton Plus_op
+        If {} -> S.singleton If_op
+        Fold {} -> S.singleton Fold_op
+        _ -> S.empty
+
+restrictionSeries :: Monad m => Series m [OpName]
+restrictionSeries =
+  generate $ \_ -> filterM (const [False,True]) (S.toList noRestriction)
+
+checkRestriction :: S.Set OpName -> Exp -> Bool
+checkRestriction strs e =
+  expOps e `S.isSubsetOf` strs

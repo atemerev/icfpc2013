@@ -71,4 +71,7 @@ test-suite test
     tasty == 0.2,
     tasty-smallcheck == 0.2,
     tasty-hunit == 0.2,
-    unmatched
+    unmatched,
+    uniplate,
+    containers,
+    smallcheck

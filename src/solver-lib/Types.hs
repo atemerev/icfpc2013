@@ -1,4 +1,4 @@
-{-# LANGUAGE GADTs, FlexibleInstances, MultiParamTypeClasses #-}
+{-# LANGUAGE GADTs, DeriveDataTypeable #-}
 module Types
   ( Exp(..)
   , Word64
@@ -8,6 +8,8 @@ module Types
 
 import Data.Word
 import Data.Bits
+import Data.Data (Data)
+import Data.Typeable (Typeable)
 
 data Exp where
   Zero :: Exp
@@ -26,7 +28,7 @@ data Exp where
   Or :: Exp -> Exp -> Exp
   Xor :: Exp -> Exp -> Exp
   Plus :: Exp -> Exp -> Exp
-  deriving (Eq, Show)
+  deriving (Eq, Ord, Show, Data, Typeable)
 
 eval :: Word64 -> Word64 -> Word64 -> Exp -> Word64
 eval main fold1 fold2 e = eval' e
