@@ -69,10 +69,7 @@ eval main fold1 fold2 e = eval' e
             (x0', x0) = x1' `divMod` 256
 
 serProg :: Monad m => Series m Exp
-serProg = decDepth series
-
-instance (Monad m) => Serial m Exp where
-  series = serExp
+serProg = decDepth serExp
 
 serExp :: (Monad m) => Series m Exp
 serExp = do
@@ -193,8 +190,16 @@ isValid e = noBrokenRefs e && (numFolds e <= 1)
     noBrokenRefs (Xor a b) = noBrokenRefs a && noBrokenRefs b
     noBrokenRefs (Plus a b) = noBrokenRefs a && noBrokenRefs b
 
-allExpsAreValid = smallCheck 6 isValid
+allExpsAreValid = smallCheck 6 $ \n ->
+  over (generate $ \_ -> list n serProg) $ \prog ->
+    isValid prog
+    
 allExpsAreSpecifiedSize =
   smallCheck 6 $ \n ->
   over (generate $ \_ -> list n serProg) $ \prog ->
     progSize prog == n
+
+-- names of the ops for limiting sets of possible ops
+-- data OpName = If_op | Not_op | Shl1_op | Shr1_op | Shr4_op | Shr16_op | And_op | Or_op | Xor_op | Plus_op
+
+-- data RestrictedExp = RExp { exp::Exp, foldState::FoldState, ops::[OpName] }
