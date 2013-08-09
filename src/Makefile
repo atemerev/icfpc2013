@@ -3,7 +3,7 @@ CONFIG:=dist/setup-config
 EXECUTABLES:=fake-server server
 BINARIES:=$(foreach e,$(EXECUTABLES),dist/build/$(e)/$(e))
 
-.PHONY: all fake clean
+.PHONY: all fake clean deps
 
 all: $(CONFIG) $(SRC)
 	cabal build
@@ -13,6 +13,9 @@ fake: all
 
 clean:
 	rm -rf dist
+
+deps:
+	cabal install --enable-tests --only-dep
 
 $(CONFIG): unmatched.cabal
 	cabal configure --enable-tests

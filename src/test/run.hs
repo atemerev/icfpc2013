@@ -26,11 +26,11 @@ generatorTests = localOption (SmallCheckDepth 7) $ testGroup "Generation"
         over (serProg noRestriction) isValid
   , localOption (SmallCheckDepth 5) $ testProperty "Operator restrictions" $
       \n ->
-      over restrictionSeries $ \(S.fromList -> restriction) ->
+      over restrictionSeries $ \ops ->
 
-      S.fromList (filter (checkRestriction restriction)
+      S.fromList (filter (checkRestriction ops)
         (list n (serProg noRestriction)))
-        == S.fromList (list n (serProg restriction))
+        == S.fromList (list n (serProg (restrictionFromList ops)))
   ]
 
 evalTests = testGroup "Evaluation" $
@@ -142,8 +142,8 @@ expOps = S.unions . map nodeToOp . universe
 
 restrictionSeries :: Monad m => Series m [OpName]
 restrictionSeries =
-  generate $ \_ -> filterM (const [False,True]) (S.toList noRestriction)
+  generate $ \_ -> filterM (const [False,True]) [Not_op, Shl1_op, Shr1_op, Shr4_op, Shr16_op, And_op, Or_op, Xor_op, Plus_op, If_op, Fold_op]
 
-checkRestriction :: S.Set OpName -> Exp -> Bool
+checkRestriction :: [OpName] -> Exp -> Bool
 checkRestriction strs e =
-  expOps e `S.isSubsetOf` strs
+  expOps e `S.isSubsetOf` (S.fromList strs)
