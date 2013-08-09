@@ -1,6 +1,6 @@
 SRC:=$(shell find . -type f -name '*.hs')
 CONFIG:=dist/setup-config
-EXECUTABLES:=fake-server
+EXECUTABLES:=fake-server server
 BINARIES:=$(foreach e,$(EXECUTABLES),dist/build/$(e)/$(e))
 
 .PHONY: all fake clean

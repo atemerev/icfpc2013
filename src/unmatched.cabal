@@ -32,9 +32,15 @@ library
   build-depends:    aeson             >= 0.6
                   , base              == 4.6.*
                   , smallcheck
+                  , HTTP
 
   hs-source-dirs:   server-api, solver
   exposed-modules:  ServerAPI
                   , Types
-  extensions:       OverloadedStrings
+  other-modules:    URLs
 
+executable server
+  main-is: server-api/Server.hs
+  build-depends:    base == 4.6.*
+                  , HTTP
+                  , unmatched
