@@ -37,7 +37,9 @@ run (FindSolvable fname tmout) = do
   where
     tryGen [] =  return ()
     tryGen (p:ps) 
-      | problemSize p >= 16 = tryGen ps -- TODO
+      | problemSize p >= 16 = do  -- TODO
+        putStrLn ("skipping " ++ problemId p ++ " - too large")
+        tryGen ps
       | otherwise = do
       res <- timeout (tmout * 10^6) $ do
         let gen = generateRestricted (problemSize p) (operators p)
