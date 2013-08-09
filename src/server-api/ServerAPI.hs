@@ -1,6 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 module ServerAPI ( getMyproblems
                  , getStatus
+                 , evalProgram
+                 , evalProgramById
                  , getTrainingProblem
                  , getAnyTrainingProblem -- no size/ops limit
                  ) where
@@ -23,8 +25,8 @@ data Problem = Problem { problemId :: String
                        , timeLeft :: Maybe Double
                        } deriving Show
 
-data EvalRequest = EvalRequest { evalProgramId :: Maybe String
-                               , evalProgram :: Maybe String
+data ProgramOrId = Program String | ID String deriving Show
+data EvalRequest = EvalRequest { programOrId :: ProgramOrId
                                , evalArguments :: [Word64]
                                } deriving Show
 
@@ -69,18 +71,6 @@ instance ToJSON Problem where
                      .=? ("timeLeft", timeLeft p)
                      )
 
-instance FromJSON EvalRequest where
-  parseJSON (Object v) = EvalRequest <$>
-                         v .:? "id" <*>
-                         v .:? "program" <*>
-                         (map fromHex <$> v .: "arguments")
-
-instance ToJSON EvalRequest where
-  toJSON p = object ([ "arguments" .= map toHex (evalArguments p) ]
-                     .=? ("id", evalProgramId p)
-                     .=? ("program", evalProgram p)
-                     )
-
 instance FromJSON EvalResponse where
   parseJSON (Object v) = EvalResponse <$>
                          v .: "status" <*>
@@ -115,6 +105,14 @@ postRequest url body = do
 getMyproblems = arglessRequest URLs.myproblems
   
 -- 2. Evaluating programs
+instance ToJSON EvalRequest where
+  toJSON (EvalRequest pgmOrId vals) = 
+    case pgmOrId of
+      Program pgm -> object [ "program" .= pgm, "arguments" .= vals ]
+      ID id       -> object [ "id" .= id, "arguments" .= vals ]
+
+evalProgramById id vals  = postRequest URLs.eval (EvalRequest (ID id) vals)
+evalProgram pgm vals     = postRequest URLs.eval (EvalRequest (Program pgm) vals)
 -- 3. Submitting guesses
 
 --------------
