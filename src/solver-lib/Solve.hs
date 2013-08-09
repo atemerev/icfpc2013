@@ -32,7 +32,6 @@ solve' progId allProgs = do
         Win -> print gr
         Mismatch input expected actual -> do
           putStrLn $ "Mismatch on " ++ show input ++ " : " ++ show actual ++ " instead of " ++ show expected
-          putStrLn $ "Continuing with " ++ show (length candidates) ++ " candidates left"
           loop pId (input:inputs) (expected:outputs) candidates
         GuessError err -> error $ "guess error: " ++ err
 
