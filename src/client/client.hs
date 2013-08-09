@@ -4,7 +4,7 @@ import System.Environment
 import Options.Applicative
 import ServerAPI (OpLimit(..),Problem(..), TrainingResponse(..))
 import StringClient as SC (getMyproblems, getStatus, getTrainingProblem, evalProgram, evalProgramById, guessProgram)
-import FileClient as FC (getUnsolved, getUnsolvedHS)
+import FileClient as FC (getUnsolved, getUnsolvedHS, filterByIds)
 import HsClient as HC (getTrainingProblem)
 import Gen
 import Data.List (isInfixOf, intercalate, find)
@@ -22,21 +22,29 @@ data Cmd = MyProblems
          | FindSolvable String Int
          | TrainSolve Int
          | Solve String Int String
+         | Filter String String
            
 main = do
   hSetBuffering stdout NoBuffering
   execParser options >>= run
 
 run MyProblems = putStrLn =<< SC.getMyproblems
+
 run Status = putStrLn =<< getStatus
+
 run (Train length oplimit) = putStrLn =<< SC.getTrainingProblem length oplimit
+
 run (Eval programOrId args) = 
   if " " `isInfixOf` programOrId
   then putStrLn =<< evalProgram     programOrId (map read args)
   else putStrLn =<< evalProgramById programOrId (map read args)
+
 run (Guess id program) = putStrLn =<< guessProgram id program
+
 run (Generate size ops) = mapM_ print $ generateRestricted size ops
+
 run (Unsolved fname) = putStrLn =<< FC.getUnsolved fname
+
 run (FindSolvable fname tmout) = do
   problems <- FC.getUnsolvedHS fname
   tryGen problems
@@ -49,11 +57,13 @@ run (FindSolvable fname tmout) = do
         Just rs -> pp rs
       tryGen ps
     pp (p, sz) = putStrLn $ (printf "%s|%d|%s|%d" (problemId p) (problemSize p) (intercalate " " $ operators p) sz)
+
 run (TrainSolve size) = do
   p <- HC.getTrainingProblem (Just size) Nothing
   let progId = (trainingId p)
   print p
   solve (trainingId p) size (trainingOps p)
+
 run (Solve fname tmout id) = do
   problems <- FC.getUnsolvedHS fname
   case find ((==id).problemId) problems of
@@ -64,6 +74,8 @@ run (Solve fname tmout id) = do
         Nothing -> error "Not feasible to solve this problem"
         Just _ -> solve (problemId p) (problemSize p) (operators p)
 
+run (Filter problemsFile idsFile) = FC.filterByIds problemsFile idsFile >>= putStrLn
+  
 options = info (clientOptions <**> helper) idm
 
 clientOptions = 
@@ -98,6 +110,9 @@ clientOptions =
   <> command "solve"
     (info realSolve
      (progDesc "Solve the REAL tasks with given ID"))
+  <> command "filter"
+    (info filterProblems
+     (progDesc "Filter out tasks with given IDs"))
   )
 
 train = Train <$> (fmap read <$> ( optional $ strOption (metavar "LENGTH" <> short 'l' <> long "length")))
@@ -122,3 +137,6 @@ trainSolve = TrainSolve <$> (read <$> argument str (metavar "SIZE"))
 realSolve = Solve <$> argument str (metavar "FILE")
                   <*> (read <$> argument str (metavar "TIMEOUT"))
                   <*> argument str (metavar "ID")
+
+filterProblems = Filter <$> argument str (metavar "MYPROBLEMS-FILE")
+                        <*> argument str (metavar "IDS-FILE")
