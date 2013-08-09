@@ -9,8 +9,8 @@ import Control.Monad
 generateAll :: Int -> [Exp]
 generateAll n = list n serProg
 
-serProg :: Monad m => Series m Exp
-serProg = decDepth serExp
+serProg:: Monad m => Series m Exp
+serProg = decDepth serExp -- remove 1 level of depth for top-level lambda
 
 serExp :: (Monad m) => Series m Exp
 serExp = do
@@ -34,14 +34,13 @@ elements = oneof . map return
 
 -- Generates (expression, does it contain a fold?)
 serExp' :: (Monad m) => Int -> FoldState -> Series m (Exp, Bool)
-serExp' 1 _ = fail "no such expressions"
-serExp' 2 InFoldBody = oneof $ map (\x -> return (x, False)) [Zero, One, MainArg, Fold1Arg, Fold2Arg]
-serExp' 2 _ = oneof $ map (\x -> return (x, False)) [Zero, One, MainArg]
+serExp' 1 InFoldBody = oneof $ map (\x -> return (x, False)) [Zero, One, MainArg, Fold1Arg, Fold2Arg]
+serExp' 1 _ = oneof $ map (\x -> return (x, False)) [Zero, One, MainArg]
 serExp' n fs = oneof $ concat [
-  if n >= 5 then [serIf n fs] else [],
-  if (n >= 6 && fs == NoFold) then [serFold n] else [],
-  if n >= 3 then map (\op -> serUnop n fs op) [Not, Shl1, Shr1, Shr4, Shr16] else [], 
-  if n >= 4 then map (\op -> serBinop n fs op) [And, Or, Xor, Plus] else []]
+  if n >= 4 then [serIf n fs] else [],
+  if (n >= 5 && fs == NoFold) then [serFold n] else [],
+  if n >= 2 then map (\op -> serUnop n fs op) [Not, Shl1, Shr1, Shr4, Shr16] else [], 
+  if n >= 3 then map (\op -> serBinop n fs op) [And, Or, Xor, Plus] else []]
 
 serIf :: (Monad m) => Int -> FoldState -> Series m (Exp, Bool)
 serIf n fs = do
@@ -76,25 +75,25 @@ serBinop n fs op = do
   (b, foldB) <- serExp' sizeB (if foldA then ExternalFold else fs)
   return (op a b, foldA || foldB)
 
-expSize :: Exp -> Int
-expSize e = expSize' e + 1 -- 1 for the top-level lambda
-  where
-    expSize' Zero = 1
-    expSize' One = 1
-    expSize' MainArg = 1
-    expSize' Fold1Arg = 1
-    expSize' Fold2Arg = 1
-    expSize' (If a b c) = 1 + expSize a + expSize b + expSize c
-    expSize' (Fold a b c) = 2 + expSize a + expSize b + expSize c
-    expSize' (Not a) = 1 + expSize a
-    expSize' (Shl1 a) = 1 + expSize a
-    expSize' (Shr1 a) = 1 + expSize a
-    expSize' (Shr4 a) = 1 + expSize a
-    expSize' (Shr16 a) = 1 + expSize a
-    expSize' (And a b) = 1 + expSize a + expSize b
-    expSize' (Or a b) = 1 + expSize a + expSize b
-    expSize' (Xor a b) = 1 + expSize a + expSize b
-    expSize' (Plus a b) = 1 + expSize a + expSize b
+progSize :: Exp -> Int
+progSize e = expSize e + 1 -- 1 for the top-level lambda
+    
+expSize Zero = 1
+expSize One = 1
+expSize MainArg = 1
+expSize Fold1Arg = 1
+expSize Fold2Arg = 1
+expSize (If a b c) = 1 + expSize a + expSize b + expSize c
+expSize (Fold a b c) = 2 + expSize a + expSize b + expSize c
+expSize (Not a) = 1 + expSize a
+expSize (Shl1 a) = 1 + expSize a
+expSize (Shr1 a) = 1 + expSize a
+expSize (Shr4 a) = 1 + expSize a
+expSize (Shr16 a) = 1 + expSize a
+expSize (And a b) = 1 + expSize a + expSize b
+expSize (Or a b) = 1 + expSize a + expSize b
+expSize (Xor a b) = 1 + expSize a + expSize b
+expSize (Plus a b) = 1 + expSize a + expSize b
 
 isValid :: Exp -> Bool
 isValid e = noBrokenRefs e && (numFolds e <= 1)
@@ -141,7 +140,7 @@ allExpsAreValid = smallCheck 6 $ \n ->
 allExpsAreSpecifiedSize =
   smallCheck 6 $ \n ->
   over (generate $ \_ -> list n serProg) $ \prog ->
-    expSize prog == n
+    progSize prog == n
 
 -- names of the ops for limiting sets of possible ops
 
