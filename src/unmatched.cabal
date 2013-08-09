@@ -31,8 +31,9 @@ executable fake-server
 library
   build-depends:    aeson             >= 0.6
                   , base              == 4.6.*
+                  , smallcheck
 
-  hs-source-dirs:   server-api
+  hs-source-dirs:   server-api, solver
   exposed-modules:  ServerAPI
                   , Types
   extensions:       OverloadedStrings
