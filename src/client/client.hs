@@ -5,13 +5,13 @@ import Options.Applicative
 import ServerAPI (OpLimit(..),Problem(..), TrainingResponse(..))
 import StringClient as SC (getMyproblems, getStatus, getTrainingProblem, evalProgram, evalProgramById, guessProgram)
 import FileClient as FC (getUnsolved, getUnsolvedHS, filterByIds)
-import HsClient as HC (getTrainingProblem)
+import HsClient as HC (getTrainingProblem, getUnsolved)
 import Gen
 import Data.List (isInfixOf, intercalate, find, sortBy)
 import Data.Ord (comparing)
 import Text.Printf
 import System.IO
-import Solve (solve, isFeasible)
+import Solve (solve, isFeasible, solve')
 
 data Cmd = MyProblems
          | Status
@@ -24,6 +24,7 @@ data Cmd = MyProblems
          | TrainSolve Int
          | Solve String String
          | Filter String String
+         | SolveMany Int Int Int
            
 main = do
   hSetBuffering stdout NoBuffering
@@ -57,7 +58,7 @@ run (FindSolvable fname tmout) = do
         Nothing -> return () -- putStrLn ("skipping " ++ problemId p ++ " - timed out")
         Just rs -> pp rs
       tryGen ps
-    pp (p, sz) = putStrLn $ (printf "%s|%d|%s|%d" (problemId p) (problemSize p) (intercalate " " $ operators p) sz)
+    pp (p, exps) = putStrLn $ (printf "%s|%d|%s|%d" (problemId p) (problemSize p) (intercalate " " $ operators p) (length exps))
 
 run (TrainSolve size) = do
   p <- HC.getTrainingProblem (Just size) Nothing
@@ -73,6 +74,19 @@ run (Solve fname id) = do
 
 run (Filter problemsFile idsFile) = FC.filterByIds problemsFile idsFile >>= putStrLn
   
+run (SolveMany offset limit tmout) = do
+  problems <- HC.getUnsolved
+  let workload = take limit $ drop offset $ sortBy (comparing problemSize) problems
+  trySolve workload
+  where
+    trySolve [] =  putStrLn "All done!"
+    trySolve (p:ps) = do
+      res <- isFeasible tmout p
+      _ <- case res of  
+        Nothing -> return () -- putStrLn ("skipping " ++ problemId p ++ " - timed out")
+        Just (p,expressions) -> solve' (problemId p) expressions
+      trySolve ps
+
 options = info (clientOptions <**> helper) idm
 
 clientOptions = 
@@ -100,16 +114,19 @@ clientOptions =
      (progDesc "Provide the list of tasks that are still not solved"))
   <> command "find-solvable"
     (info findSolvable
-     (progDesc "Find list of problems solvable by brute-force within N seconds"))
+     (progDesc "Find list of problems solvable by brute-force within N seconds (deprecated)"))
   <> command "train-solve"
     (info trainSolve
      (progDesc "Solve the new training task of the given size"))
-  <> command "production-solve"
+  <> command "production-solve-one"
     (info realSolve
-     (progDesc "Solve the REAL tasks with given ID"))
+     (progDesc "Solve the REAL tasks with given ID (deprecated)"))
+  <> command "production-solve-many"
+    (info realSolveMany
+     (progDesc "Solve some unsolved REAL tasks"))
   <> command "filter-out"
     (info filterProblems
-     (progDesc "Filter out tasks with given IDs"))
+     (progDesc "Filter out tasks with given IDs (deprecated)"))
   )
 
 train = Train <$> (fmap read <$> ( optional $ strOption (metavar "LENGTH" <> short 'l' <> long "length")))
@@ -133,6 +150,10 @@ trainSolve = TrainSolve <$> (read <$> argument str (metavar "SIZE"))
 
 realSolve = Solve <$> argument str (metavar "FILE")
                   <*> argument str (metavar "ID")
+
+realSolveMany= SolveMany <$> (read <$> strOption (metavar "OFFSET" <> long "offset"))
+                         <*> (read <$> strOption (metavar "LIMIT" <> long "limit"))
+                         <*> (read <$> strOption (metavar "TIMEOUT" <> long "timeout"))
 
 filterProblems = Filter <$> argument str (metavar "MYPROBLEMS-FILE")
                         <*> argument str (metavar "IDS-FILE")

@@ -1,4 +1,5 @@
 module HsClient ( getMyproblems
+                , getUnsolved
                 -- , getStatus
                 , evalProgram
                 , evalProgramById
@@ -8,9 +9,9 @@ module HsClient ( getMyproblems
                 ) where
 
 import qualified StringClient as SC
-import Data.ByteString.Lazy.Char8 as BS hiding (map)
+import Data.ByteString.Lazy.Char8 as BS hiding (map, filter)
 import Data.Aeson 
-import Data.Maybe (fromMaybe)
+import Data.Maybe (fromMaybe, isNothing)
 import ServerAPI
 import Data.Word (Word64)
 
@@ -21,6 +22,7 @@ wrap fname stringClient = do
 getMyproblems :: IO [Problem]
 getMyproblems = wrap "myproblems" $ SC.getMyproblems
 
+getUnsolved = getMyproblems >>= return . filter (isNothing.solved)
 -- getStatus               = wrap $ SC.getStatus
 
 evalProgram     :: String -> [Word64] -> IO EvalResponse
