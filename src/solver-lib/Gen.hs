@@ -1,4 +1,4 @@
-module Gen (generateAll) where
+module Gen (generateAll, serProg) where
 
 import Types
 import Test.SmallCheck
