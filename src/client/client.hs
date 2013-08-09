@@ -8,11 +8,9 @@ import FileClient as FC (getUnsolved, getUnsolvedHS)
 import HsClient as HC (getTrainingProblem)
 import Gen
 import Data.List (isInfixOf, intercalate)
-import System.Timeout
-import Control.Exception (evaluate)
 import Text.Printf
 import System.IO
-import Solve (solve)
+import Solve (solve, isFeasible)
 
 data Cmd = MyProblems
          | Status
@@ -23,7 +21,8 @@ data Cmd = MyProblems
          | Unsolved String
          | FindSolvable String Int
          | TrainSolve Int
-
+         | Solve String String
+           
 main = do
   hSetBuffering stdout NoBuffering
   execParser options >>= run
@@ -43,16 +42,8 @@ run (FindSolvable fname tmout) = do
   tryGen problems
   where
     tryGen [] =  return ()
-    tryGen (p:ps) 
-      | problemSize p >= 16 = do  -- TODO
-        -- putStrLn ("skipping " ++ problemId p ++ " - too large")
-        tryGen ps
-      | otherwise = do
-      res <- timeout (tmout * 10^6) $ do
-        let gen = generateRestricted (problemSize p) (operators p)
-        let lgen = length gen
-        evaluate lgen
-        return (p, lgen)
+    tryGen (p:ps) = do
+      res <- isFeasible tmout p
       _ <- case res of  
         Nothing -> return () -- putStrLn ("skipping " ++ problemId p ++ " - timed out")
         Just rs -> pp rs
@@ -63,7 +54,7 @@ run (TrainSolve size) = do
   let progId = (trainingId p)
   print p
   solve (trainingId p) size (trainingOps p)
-  
+
 
 options = info (clientOptions <**> helper) idm
 
@@ -95,7 +86,10 @@ clientOptions =
      (progDesc "Find list of problems solvable by brute-force within N seconds"))
   <> command "train-solve"
     (info trainSolve
-     (progDesc "Solve the new training taks of the given size"))
+     (progDesc "Solve the new training task of the given size"))
+  <> command "solve"
+    (info realSolve
+     (progDesc "Solve the REAL tasks with given ID"))
   )
 
 train = Train <$> (fmap read <$> ( optional $ strOption (metavar "LENGTH" <> short 'l' <> long "length")))
@@ -116,3 +110,6 @@ findSolvable = FindSolvable <$> argument str (metavar "FILE")
                             <*> (read <$> argument str (metavar "TIMEOUT"))
 
 trainSolve = TrainSolve <$> (read <$> argument str (metavar "SIZE"))
+
+realSolve = Solve <$> argument str (metavar "FILE")
+                  <*> argument str (metavar "ID")
