@@ -161,6 +161,9 @@ serBinop :: (Monad m, ?tfold :: Bool) => Int -> Restriction -> FoldState -> (Exp
 serBinop n restriction fs op = do
   sizeA <- elements [1..n - 2]
   let sizeB = n - 1 - sizeA
-  (a, foldA) <- serExp' sizeA restriction fs
-  (b, foldB) <- serExp' sizeB restriction (if foldA then ExternalFold else fs)
-  return (op a b, foldA || foldB)
+  if sizeB > sizeA
+    then mzero
+    else do
+      (a, foldA) <- serExp' sizeA restriction fs
+      (b, foldB) <- serExp' sizeB restriction (if foldA then ExternalFold else fs)
+      return (op a b, foldA || foldB)
