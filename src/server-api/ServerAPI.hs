@@ -14,6 +14,7 @@ import qualified URLs
 import Data.Text (Text)
 import Data.Word
 import Data.ByteString.Lazy.Char8 as BS hiding (map)
+import Text.Printf (printf)
 
 data Problem = Problem { problemId :: String
                        , problemSize :: Int
@@ -40,6 +41,13 @@ data GuessResponse = GuessResponse { guessStatus :: String
                                    , guessValues :: Maybe [Word64]
                                    , guessMessage :: Maybe String
                                    } deriving Show
+
+fromHex :: String -> Word64
+fromHex = read
+
+toHex :: Word64 -> String
+toHex w = printf "0x%016X" w
+
 instance FromJSON Problem where
   parseJSON (Object v) = Problem <$>
                          v .: "id" <*>
@@ -65,7 +73,13 @@ instance FromJSON EvalRequest where
   parseJSON (Object v) = EvalRequest <$>
                          v .:? "id" <*>
                          v .:? "program" <*>
-                         (map read <$> v .: "arguments")
+                         (map fromHex <$> v .: "arguments")
+
+instance ToJSON EvalRequest where
+  toJSON p = object ([ "arguments" .= map toHex (evalArguments p) ]
+                     .=? ("id", evalProgramId p)
+                     .=? ("program", evalProgram p)
+                     )
 
 instance FromJSON EvalResponse where
   parseJSON (Object v) = EvalResponse <$>
@@ -81,7 +95,7 @@ instance FromJSON Guess where
 instance FromJSON GuessResponse where
   parseJSON (Object v) = GuessResponse <$>
                          v .: "status" <*>
-                         (fmap (map read) <$> (v .:? "values")) <*>
+                         (fmap (map fromHex) <$> (v .:? "values")) <*>
                          v .:? "message"
 
 arglessRequest url = do
