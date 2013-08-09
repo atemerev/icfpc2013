@@ -87,7 +87,7 @@ clientOptions =
   <> command "train-solve"
     (info trainSolve
      (progDesc "Solve the new training task of the given size"))
-  <> command "solve"
+  <> command "solve-production"
     (info realSolve
      (progDesc "Solve the REAL tasks with given ID"))
   )
