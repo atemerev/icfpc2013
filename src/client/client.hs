@@ -4,17 +4,20 @@ import System.Environment
 import Options.Applicative
 import ServerAPI (OpLimit(..),Problem(..))
 import StringClient as SC (getMyproblems, getStatus, getTrainingProblem, evalProgram, evalProgramById, guessProgram)
-import FileClient as FC (getUnsolved)
+import FileClient as FC (getUnsolved, getUnsolvedHS)
 import Gen
-import Data.List (isInfixOf)
+import Data.List (isInfixOf, intercalate)
+import System.Timeout
+import Text.Printf
 
 data Cmd = MyProblems
          | Status
-         | Train { length :: Maybe Int, opLimit::Maybe OpLimit }
+         | Train (Maybe Int) (Maybe OpLimit)
          | Eval String [String]
          | Guess String String
          | Generate Int [String]
          | Unsolved String
+         | FindSolvable String Int
 
 main = execParser options >>= run
 
@@ -28,6 +31,23 @@ run (Eval programOrId args) =
 run (Guess id program) = putStrLn =<< guessProgram id program
 run (Generate size ops) = mapM_ print $ generateRestricted size ops
 run (Unsolved fname) = putStrLn =<< FC.getUnsolved fname
+run (FindSolvable fname tmout) = do
+  problems <- FC.getUnsolvedHS fname
+  tryGen problems
+  where
+    tryGen [] =  return ()
+    tryGen (p:ps) 
+      | problemSize p >= 16 = tryGen ps -- TODO
+      | otherwise = do
+      res <- timeout (tmout * 10^6) $ do
+        let gen = generateRestricted (problemSize p) (operators p)
+        let lgen = length gen
+        return (p, lgen `seq` lgen)
+      _ <- case res of  
+        Nothing -> putStrLn ("skipping " ++ problemId p ++ " - timed out")
+        Just rs -> pp rs
+      tryGen ps
+    pp (p, sz) = putStrLn $ (printf "%s|%d|%s|%d" (problemId p) (problemSize p) (intercalate " " $ operators p) sz)
 
 options = info (clientOptions <**> helper) idm
 
@@ -54,6 +74,9 @@ clientOptions =
   <> command "unsolved"
     (info unsolved
      (progDesc "Provide the list of tasks that are still not solved"))
+  <> command "find-solvable"
+    (info findSolvable
+     (progDesc "Find list of problems solvable by brute-force within N seconds"))
   )
 
 train = Train <$> (fmap read <$> ( optional $ strOption (metavar "LENGTH" <> short 'l' <> long "length")))
@@ -69,3 +92,6 @@ generate = Generate <$> (read <$> argument str (metavar "SIZE"))
                     <*> (words <$> argument str (metavar "OPERATIONS"))
 
 unsolved = Unsolved <$> argument str (metavar "FILE")
+
+findSolvable = FindSolvable <$> argument str (metavar "FILE")
+                            <*> (read <$> argument str (metavar "TIMEOUT"))
