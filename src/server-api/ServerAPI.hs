@@ -26,7 +26,7 @@ data EvalResponse = EvalOK { evalOutputs :: [Word64] }
                   deriving Show
 
 data Guess = Guess { guessProblemId :: String
-                   , guessProgramText :: String -- TODO(vanya) should be Program
+                   , guessProgramText :: String
                    } deriving Show
 
 data GuessResponse = Win

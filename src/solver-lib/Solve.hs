@@ -12,10 +12,11 @@ import System.Timeout
 
 solve :: String -> Int -> [String] -> IO ()
 solve progId size operations = do
-  EvalOK outputs <- evalProgramById progId bvs -- TODO
-  -- print outputs
-  loop progId bvs outputs allProgs
-  
+  evalRes <- evalProgramById progId bvs
+  case evalRes of
+    EvalOK outputs -> loop progId bvs outputs allProgs
+    EvalError msg -> error $ "evalProgramById returned error:" ++ show msg
+
   where 
     allProgs = generateRestricted size operations
 
@@ -37,12 +38,10 @@ solve progId size operations = do
 
 -- Check if it is feasible to solve this problem by brute-force within 'timeout' seconds
 isFeasible :: Int -> Problem -> IO (Maybe (Problem, Int))
-isFeasible tmout p
-  | problemSize p >= 16 = return Nothing -- TODO
-  | otherwise =
-    timeout (tmout * 10^6) $ do
-      let gen = generateRestricted (problemSize p) (operators p)
-      let lgen = length gen
-      evaluate lgen
-      return (p, lgen)
+isFeasible tmout p =
+  timeout (tmout * 10^6) $ do
+    let gen = generateRestricted (problemSize p) (operators p)
+    let lgen = length gen
+    evaluate lgen
+    return (p, lgen)
       
