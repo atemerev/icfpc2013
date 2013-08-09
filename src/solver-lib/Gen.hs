@@ -1,20 +1,35 @@
 {-# LANGUAGE ImplicitParams #-}
-module Gen (generateRestricted, serProg, noRestriction, OpName(..)) where
+module Gen (generateRestricted, serProg, noRestriction, restrictionFromList, OpName(..)) where
 
 import Types
 import Test.SmallCheck
 import Test.SmallCheck.Series
 import Control.Applicative
 import Control.Monad
-import qualified Data.Set as S
 import Data.Maybe (catMaybes)
+import Data.Bits
+
+restrictionFromList rs = sum [
+    (if r == Not_op then 1 `shiftL` 0 else 0) +
+    (if r == Shl1_op then 1 `shiftL` 1 else 0) +
+    (if r == Shr1_op then 1 `shiftL` 2 else 0) +
+    (if r == Shr4_op then 1 `shiftL` 3 else 0) +
+    (if r == Shr16_op then 1 `shiftL` 4 else 0) +
+    (if r == And_op then 1 `shiftL` 5 else 0) +
+    (if r == Or_op then 1 `shiftL` 6 else 0) +
+    (if r == Xor_op then 1 `shiftL` 7 else 0) +
+    (if r == Plus_op then 1 `shiftL` 8 else 0) +
+    (if r == If_op then 1 `shiftL` 9 else 0) +
+    (if r == Fold_op then 1 `shiftL` 10 else 0)
+    | r <- rs
+    ]
 
 generateRestricted :: Int -> [String] -> [Exp] -- allowed ops are passed as string list
 generateRestricted n rst = 
   generateRestricted' tfold n restriction
   where
     tfold = "tfold" `elem` rst
-    restriction = S.fromList $ map parse $ filter (/="tfold") rst
+    restriction = restrictionFromList $ map parse $ filter (/="tfold") rst
     parse "not" = Not_op
     parse "shl1" = Shl1_op
     parse "shr1" = Shr1_op
@@ -39,16 +54,31 @@ generateRestricted' tfold n restriction =
     foldBodies :: (?tfold :: Bool, Monad m) => Series m Exp
     foldBodies = do
       n <- getDepth
-      (e, hasFold) <- serExp' n (S.delete Fold_op restriction) InFoldBody -- Fold should not be there, but remove it just in case
+      (e, hasFold) <- serExp' n (restriction .&. complement (1 `shiftL` 10)) InFoldBody -- Fold should not be there, but remove it just in case
       return e
 
 -- Generators are restricted to allowed function set
-data OpName = Not_op | Shl1_op | Shr1_op | Shr4_op | Shr16_op | And_op | Or_op | Xor_op | Plus_op | If_op | Fold_op deriving (Eq, Ord, Show)
-type Restriction = S.Set OpName
-noRestriction = S.fromList [Not_op, Shl1_op, Shr1_op, Shr4_op, Shr16_op, And_op, Or_op, Xor_op, Plus_op, If_op, Fold_op]
+data OpName = Not_op | Shl1_op | Shr1_op | Shr4_op
+            | Shr16_op | And_op | Or_op | Xor_op
+            | Plus_op | If_op | Fold_op
+            deriving (Eq, Ord, Show)
+type Restriction = Int
+noRestriction = 0xFFFF :: Int
+
+allowed restriction Not_op = restriction .&. (1 `shiftL` 0) /= 0
+allowed restriction Shl1_op = restriction .&. (1 `shiftL` 1) /= 0
+allowed restriction Shr1_op = restriction .&. (1 `shiftL` 2) /= 0
+allowed restriction Shr4_op = restriction .&. (1 `shiftL` 3) /= 0
+allowed restriction Shr16_op = restriction .&. (1 `shiftL` 4) /= 0
+allowed restriction And_op = restriction .&. (1 `shiftL` 5) /= 0
+allowed restriction Or_op = restriction .&. (1 `shiftL` 6) /= 0
+allowed restriction Xor_op = restriction .&. (1 `shiftL` 7) /= 0
+allowed restriction Plus_op = restriction .&. (1 `shiftL` 8) /= 0
+allowed restriction If_op = restriction .&. (1 `shiftL` 9) /= 0
+allowed restriction Fold_op = restriction .&. (1 `shiftL` 10) /= 0
 
 allow restriction opName f =
-  if opName `S.member` restriction then Just f else Nothing
+  if allowed restriction opName then Just f else Nothing
 
 allowedUnaryOps :: Restriction -> [Exp -> Exp]
 allowedUnaryOps r = 
@@ -59,10 +89,10 @@ allowedBinaryOps r =
   catMaybes [ allow r op f | (op,f) <- [(And_op, And), (Or_op, Or), (Xor_op, Xor), (Plus_op, Plus)]]
 
 allowedIf :: Restriction -> Bool
-allowedIf r = If_op `S.member` r
+allowedIf r = allowed r If_op
   
 allowedFold :: Restriction -> Bool
-allowedFold r = Fold_op `S.member` r
+allowedFold r = allowed r Fold_op
       
 -- 
 serProg :: Monad m => Restriction -> Series m Exp
@@ -99,7 +129,7 @@ serExp' 1 _ InFoldBody = oneof $
 serExp' 1 _ _ = oneof $ map (\x -> return (x, False)) [Zero, One, MainArg]
 serExp' n restriction fs = oneof $ concat [
   if (n >= 4 && allowedIf restriction) then [serIf n restriction fs] else [],
-  if (n >= 5 && fs == NoFold && allowedFold restriction) then [serFold n (S.delete Fold_op restriction)] else [],
+  if (n >= 5 && fs == NoFold && allowedFold restriction) then [serFold n (restriction .&. complement (1 `shiftL` 10))] else [],
   if n >= 2 then map (\op -> serUnop n restriction fs op) (allowedUnaryOps restriction) else [], 
   if n >= 3 then map (\op -> serBinop n restriction fs op) (allowedBinaryOps restriction) else []]
 
