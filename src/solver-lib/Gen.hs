@@ -1,3 +1,4 @@
+{-# LANGUAGE ImplicitParams #-}
 module Gen (generateRestricted, serProg, noRestriction, OpName(..)) where
 
 import Types
@@ -30,9 +31,12 @@ generateRestricted n rst =
 generateRestricted' :: Bool -> Int -> Restriction -> [Exp]
 generateRestricted' tfold n restriction = 
   if tfold
-  then map (\e -> Fold MainArg Zero e) $ list (n-5) foldBodies -- |fold x 0| is 2 + 1 + 1, hence n-4, and another -1 for top-level lambda
+  then
+    let ?tfold = True
+    in map (\e -> Fold MainArg Zero e) $ list (n-5) foldBodies -- |fold x 0| is 2 + 1 + 1, hence n-4, and another -1 for top-level lambda
   else list n (serProg restriction)
   where
+    foldBodies :: (?tfold :: Bool, Monad m) => Series m Exp
     foldBodies = do
       n <- getDepth
       (e, hasFold) <- serExp' n (S.delete Fold_op restriction) InFoldBody -- Fold should not be there, but remove it just in case
@@ -64,8 +68,10 @@ allowedFold r = Fold_op `S.member` r
 serProg :: Monad m => Restriction -> Series m Exp
 serProg restriction = decDepth (serExpression restriction)-- remove 1 level of depth for top-level lambda
 
+-- a top-level expression, no tfold
 serExpression :: (Monad m) => Restriction -> Series m Exp
 serExpression restriction = do
+  let ?tfold = False
   n <- getDepth
   (e, hasFold) <- serExp' n restriction NoFold
   return e
@@ -82,8 +88,14 @@ elements :: (Monad m) => [a] -> Series m a
 elements = oneof . map return
 
 -- Generates (expression, does it contain a fold?)
-serExp' :: (Monad m) => Int -> Restriction -> FoldState -> Series m (Exp, Bool)
-serExp' 1 _ InFoldBody = oneof $ map (\x -> return (x, False)) [Zero, One, MainArg, Fold1Arg, Fold2Arg]
+serExp' :: (Monad m, ?tfold :: Bool) => Int -> Restriction -> FoldState -> Series m (Exp, Bool)
+serExp' 1 _ InFoldBody = oneof $
+  map (\x -> return (x, False))
+    -- if tfold is set, the only occurrence of MainArg is at the toplevel
+    ((if ?tfold
+      then id
+      else (MainArg :))
+      [Zero, One, Fold1Arg, Fold2Arg])
 serExp' 1 _ _ = oneof $ map (\x -> return (x, False)) [Zero, One, MainArg]
 serExp' n restriction fs = oneof $ concat [
   if (n >= 4 && allowedIf restriction) then [serIf n restriction fs] else [],
@@ -91,7 +103,7 @@ serExp' n restriction fs = oneof $ concat [
   if n >= 2 then map (\op -> serUnop n restriction fs op) (allowedUnaryOps restriction) else [], 
   if n >= 3 then map (\op -> serBinop n restriction fs op) (allowedBinaryOps restriction) else []]
 
-serIf :: (Monad m) => Int -> Restriction -> FoldState -> Series m (Exp, Bool)
+serIf :: (Monad m, ?tfold :: Bool) => Int -> Restriction -> FoldState -> Series m (Exp, Bool)
 serIf n restriction fs = do
   sizeA <- elements [1..n - 3]
   sizeB <- elements [1..n - 2 - sizeA]
@@ -101,7 +113,7 @@ serIf n restriction fs = do
   (c, foldC) <- serExp' sizeC restriction (if (foldA || foldB) then ExternalFold else fs)
   return (If a b c, foldA || foldB || foldC)
 
-serFold :: (Monad m) => Int -> Restriction -> Series m (Exp, Bool)
+serFold :: (Monad m, ?tfold :: Bool) => Int -> Restriction -> Series m (Exp, Bool)
 serFold n restriction = do
   sizeArg <- elements [1..n - 4]
   sizeSeed <- elements [1..n - 3 - sizeArg]
@@ -111,12 +123,12 @@ serFold n restriction = do
   (c, foldC) <- serExp' sizeBody restriction InFoldBody
   return (Fold a b c, True)
 
-serUnop :: (Monad m) => Int -> Restriction -> FoldState -> (Exp -> Exp) -> Series m (Exp, Bool)
+serUnop :: (Monad m, ?tfold :: Bool) => Int -> Restriction -> FoldState -> (Exp -> Exp) -> Series m (Exp, Bool)
 serUnop n restriction fs op = do
   (a, foldA) <- serExp' (n-1) restriction fs
   return (op a, foldA)
 
-serBinop :: (Monad m) => Int -> Restriction -> FoldState -> (Exp -> Exp -> Exp) -> Series m (Exp, Bool)
+serBinop :: (Monad m, ?tfold :: Bool) => Int -> Restriction -> FoldState -> (Exp -> Exp -> Exp) -> Series m (Exp, Bool)
 serBinop n restriction fs op = do
   sizeA <- elements [1..n - 2]
   let sizeB = n - 1 - sizeA
