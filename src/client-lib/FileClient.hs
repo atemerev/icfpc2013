@@ -1,9 +1,11 @@
-module FileClient (getMyproblems, getMyproblemsHS, getUnsolvedHS, getUnsolved) where
+module FileClient (getMyproblems, getMyproblemsHS, getUnsolvedHS, getUnsolved, filterByIds) where
 
 import Data.ByteString.Lazy.Char8 as BS hiding (map, hPutStrLn, filter)
 import ServerAPI
 import Data.Aeson
 import Data.Maybe
+import Control.Applicative
+import qualified Data.Set as S
 
 getMyproblemsHS :: String -> IO [Problem]
 getMyproblemsHS fname = do
@@ -20,3 +22,9 @@ getUnsolvedHS fname = do
   return $ filter (isNothing.solved) pblms
   
 getUnsolved fname = getUnsolvedHS fname >>= asString
+
+filterByIds problemsFile idsFile = do
+  problems <- getUnsolvedHS problemsFile
+  ids <- S.fromList . Prelude.lines <$> Prelude.readFile idsFile
+  let rest = filter (not.(`S.member` ids).problemId) problems
+  asString rest

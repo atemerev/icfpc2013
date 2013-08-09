@@ -111,27 +111,26 @@ data FoldState = NoFold -- Allowed to generate unrestricted expression except re
                | InFoldBody -- Allowed to generate references to fold args but not folds
                deriving (Eq, Show)
 
-oneof :: (Monad m) => [Series m a] -> Series m a
-oneof xs = foldr mplus mzero xs
-
 elements :: (Monad m) => [a] -> Series m a
-elements = oneof . map return
+elements = msum . map return
 
 -- Generates (expression, does it contain a fold?)
 serExp' :: (Monad m, ?tfold :: Bool) => Int -> Restriction -> FoldState -> Series m (Exp, Bool)
-serExp' 1 _ InFoldBody = oneof $
-  map (\x -> return (x, False))
-    -- if tfold is set, the only occurrence of MainArg is at the toplevel
-    ((if ?tfold
-      then id
-      else (MainArg :))
-      [Zero, One, Fold1Arg, Fold2Arg])
-serExp' 1 _ _ = oneof $ map (\x -> return (x, False)) [Zero, One, MainArg]
-serExp' n restriction fs = oneof $ concat [
+serExp' n _ _ | n < 1 = mzero
+-- if tfold is set, the only occurrence of MainArg is at the toplevel
+serExp' 1 _ InFoldBody = if ?tfold
+                         then msum [return (Zero, False), return (One, False), return (Fold1Arg, False), return (Fold2Arg, False)]
+                         else msum [return (MainArg, False), return (Zero, False), return (One, False), return (Fold1Arg, False), return (Fold2Arg, False)]
+serExp' 1 _ _ = msum [return (Zero, False), return (One, False), return (MainArg, False)]
+serExp' 2 restriction fs = msum $ map (\op -> serUnop 2 restriction fs op) (allowedUnaryOps restriction)
+serExp' 3 restriction fs = msum $ concat [
+  map (\op -> serUnop 3 restriction fs op) (allowedUnaryOps restriction),
+  map (\op -> serBinop 3 restriction fs op) (allowedBinaryOps restriction)]
+serExp' n restriction fs = msum $ concat [
   if (n >= 4 && allowedIf restriction) then [serIf n restriction fs] else [],
   if (n >= 5 && fs == NoFold && allowedFold restriction) then [serFold n (restriction .&. complement (1 `shiftL` 10))] else [],
-  if n >= 2 then map (\op -> serUnop n restriction fs op) (allowedUnaryOps restriction) else [], 
-  if n >= 3 then map (\op -> serBinop n restriction fs op) (allowedBinaryOps restriction) else []]
+  map (\op -> serUnop n restriction fs op) (allowedUnaryOps restriction),
+  map (\op -> serBinop n restriction fs op) (allowedBinaryOps restriction)]
 
 serIf :: (Monad m, ?tfold :: Bool) => Int -> Restriction -> FoldState -> Series m (Exp, Bool)
 serIf n restriction fs = do

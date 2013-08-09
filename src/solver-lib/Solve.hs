@@ -1,6 +1,7 @@
-module Solve (solve, isFeasible) where 
+module Solve (solve, solve', isFeasible) where 
 
 import RandomBV (bvs)
+import Types
 import ServerAPI
 import HsClient (evalProgramById, guessProgram)
 import Gen (generateRestricted)
@@ -9,17 +10,17 @@ import PP (ppProg)
 import Control.Exception (evaluate)
 import System.Timeout
 
-
 solve :: String -> Int -> [String] -> IO ()
-solve progId size operations = do
+solve progId size operations = solve' progId (generateRestricted size operations)
+
+solve' :: String -> [Exp] -> IO ()
+solve' progId allProgs = do
   evalRes <- evalProgramById progId bvs
   case evalRes of
     EvalOK outputs -> loop progId bvs outputs allProgs
     EvalError msg -> error $ "evalProgramById returned error:" ++ show msg
 
   where 
-    allProgs = generateRestricted size operations
-
     loop pId inputs outputs programs = do
       let
         candidates = filterProgs inputs outputs programs
@@ -37,13 +38,11 @@ solve progId size operations = do
 
 
 -- Check if it is feasible to solve this problem by brute-force within 'timeout' seconds
-isFeasible :: Int -> Problem -> IO (Maybe (Problem, Int))
-isFeasible tmout p
-  | problemSize p >= 16 = return Nothing -- TODO
-  | otherwise =
-    timeout (tmout * 10^6) $ do
-      let gen = generateRestricted (problemSize p) (operators p)
-      let lgen = length gen
-      evaluate lgen
-      return (p, lgen)
+isFeasible :: Int -> Problem -> IO (Maybe (Problem, [Exp]))
+isFeasible tmout p =
+  timeout (tmout * 10^6) $ do
+    let gen = generateRestricted (problemSize p) (operators p)
+    let lgen = length gen
+    evaluate lgen
+    return (p, gen)
       
