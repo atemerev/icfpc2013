@@ -42,6 +42,7 @@ library
                   , Types
                   , RandomBV
                   , Filter
+                  , PP
 
 executable client
   hs-source-dirs:  ./client
