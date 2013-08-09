@@ -6,6 +6,7 @@ import Test.SmallCheck.Series
 import Control.Applicative
 import Control.Monad
 import qualified Data.Set as S
+import Data.Maybe (catMaybes)
 
 generateAll :: Int -> [Exp]
 generateAll n = list n serProg
@@ -15,11 +16,16 @@ generateAll n = list n serProg
 data OpName = Not_op | Shl1_op | Shr1_op | Shr4_op | Shr16_op | And_op | Or_op | Xor_op | Plus_op | If_op | Fold_op deriving (Eq, Ord)
 type Restriction = S.Set OpName
 
+allow restriction opName f =
+  if opName `S.member` restriction then Just f else Nothing
+
 allowedUnaryOps :: Restriction -> [Exp -> Exp]
-allowedUnaryOps r = [Not, Shl1, Shr1, Shr4, Shr16] -- TODO
+allowedUnaryOps r = 
+  catMaybes [ allow r op f | (op,f) <- [(Not_op,Not), (Shl1_op, Shl1), (Shr1_op, Shr1), (Shr4_op, Shr4), (Shr16_op, Shr16)]]
 
 allowedBinaryOps :: Restriction -> [Exp -> Exp -> Exp]
-allowedBinaryOps r = [And, Or, Xor, Plus] -- TODO
+allowedBinaryOps r = 
+  catMaybes [ allow r op f | (op,f) <- [(And_op, And), (Or_op, Or), (Xor_op, Xor), (Plus_op, Plus)]]
 
 allowedIf :: Restriction -> Bool
 allowedIf r = If_op `S.member` r
