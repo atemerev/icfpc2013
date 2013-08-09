@@ -45,7 +45,7 @@ data TrainingRequest = TrainingRequest { size :: Maybe Int
 data TrainingResponse = TrainingResponse { challenge :: String
                                          , trainingId :: String
                                          , trainingSize :: Int
-                                         , traininOpLimit :: OpLimit
+                                         , traininOps :: [String]
                                          }
 
 array lst = Array $ V.fromList lst
@@ -53,14 +53,7 @@ instance ToJSON OpLimit where
   toJSON NoFolds = array []
   toJSON Fold    = array ["fold"]
   toJSON TFold   = array ["tfold"]
-  
-instance FromJSON OpLimit where
-  parseJSON (Array arr) = 
-    return $ case V.toList arr of
-      [] -> NoFolds
-      ["fold"] -> Fold
-      ["tfold"] -> TFold
-      
+        
 instance ToJSON TrainingRequest where
   toJSON (TrainingRequest sz op) = object [ "size" .= sz, "operators" .= op ]
   
