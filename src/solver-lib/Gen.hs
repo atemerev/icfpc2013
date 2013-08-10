@@ -205,7 +205,7 @@ serExpression restriction = do
   let ?tfold = False
   n <- getDepth
   let filledCache = let ?cache = M.empty
-                    in M.fromList [((i, fs), [(e,f) | (e,f) <- (list i (serExp' i restriction fs)), isSimpleC e])
+                    in M.fromList [((i, fs), [(e,f) | (e,f) <- (list i (serExp' i restriction fs)), isSimpleC e, fs /= InFoldBody || usesFold2Arg e])
                                   | i <- [cacheMin .. min n cacheMax],
                                     fs <- [NoFold, ExternalFold, InFoldBody]
                                    ]
