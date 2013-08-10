@@ -72,7 +72,7 @@ evalTests = testGroup "Evaluation" $
 isValid :: Exp -> Bool
 isValid e = noBrokenRefs e && (numFolds e <= 1)
   where
-    numFoldsC ec = numFolds $ expr ec
+    numFoldsC (ExpC _ e) = numFolds e
     numFolds Zero = 0
     numFolds One = 0
     numFolds MainArg = 0
@@ -91,7 +91,7 @@ isValid e = noBrokenRefs e && (numFolds e <= 1)
     numFolds (Plus a b) = numFoldsC a + numFoldsC b
 
     -- Checks that there are no references to Fold1Arg or Fold2Arg outside a Fold.
-    noBrokenRefsC ec = noBrokenRefs $ expr ec
+    noBrokenRefsC (ExpC _ e) = noBrokenRefs e
     
     noBrokenRefs Zero = True
     noBrokenRefs One = True

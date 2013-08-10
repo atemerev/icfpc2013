@@ -25,11 +25,11 @@ import RandomBV
 -- Expression that caches result of evaluation on the first bitvector that we would test on
 seed = head bvs
 
-data ExpC = ExpC {cached :: !(Maybe Word64), size :: !Int, expr :: Exp} deriving (Show, Data, Typeable)
+data ExpC = ExpC {cached :: !(Maybe Word64), expr :: Exp} deriving (Show, Data, Typeable)
 instance Eq ExpC where
-  a == b = expr a == expr b
+  (ExpC _ a) == (ExpC _ b) = a == b
 instance Ord ExpC where
-  compare a b = compare (expr a) (expr b)
+  compare (ExpC _ a) (ExpC _ b) = compare a b
 
 data Exp =
     Zero
@@ -50,7 +50,7 @@ data Exp =
   | Plus ExpC ExpC
   deriving (Eq, Ord, Show, Data, Typeable)
 
-isConstExprC ec = isConstExpr $ expr ec
+isConstExprC (ExpC _ e) = isConstExpr e
 
 isConstExpr Zero = True
 isConstExpr One = True
@@ -159,12 +159,12 @@ evalOnSeed e =
 
 cache e = 
   let ?foldArgs = Nothing in 
-  ExpC (evalOnSeed e) (expSize e) e
-zero = ExpC (Just 0) 1 Zero
-one  = ExpC (Just 1) 1 One
-mainArg = ExpC (Just seed) 1 MainArg
-fold1Arg = ExpC Nothing 1 Fold1Arg
-fold2Arg = ExpC Nothing 1 Fold2Arg
+  ExpC (evalOnSeed e) e
+zero = ExpC (Just 0) Zero
+one  = ExpC (Just 1) One
+mainArg = ExpC (Just seed) MainArg
+fold1Arg = ExpC Nothing Fold1Arg
+fold2Arg = ExpC Nothing Fold2Arg
 if0 a b c = cache (If a b c)
 fold_ a b c = cache (Fold a b c)
 not_ a   = cache (Not a)
@@ -180,7 +180,7 @@ plus a b = cache (Plus a b)
 progSize :: Exp -> Int
 progSize e = expSize e + 1
 
-expCSize ec = size ec
+expCSize ec = expSize (expr ec)
 
 expSize :: Exp -> Int
 expSize Zero = 1
