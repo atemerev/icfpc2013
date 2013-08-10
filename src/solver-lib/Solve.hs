@@ -5,7 +5,7 @@ import Types
 import ServerAPI
 import HsClient (evalProgramById, guessProgram)
 import Gen (generateRestrictedUpTo)
-import Filter (filterProgs)
+import Filter (filterProgs, filterByCached)
 import PP (ppProg)
 import Control.Exception (evaluate)
 import System.Timeout
@@ -13,11 +13,11 @@ import System.Timeout
 solve :: String -> Int -> [String] -> IO ()
 solve progId size operations = solve' progId (generateRestrictedUpTo size operations)
 
-solve' :: String -> [Exp] -> IO ()
+solve' :: String -> [ExpC] -> IO ()
 solve' progId allProgs = do
   evalRes <- evalProgramById progId bvs
   case evalRes of
-    EvalOK outputs -> loop progId bvs outputs allProgs
+    EvalOK outputs -> loop progId bvs outputs (filterByCached (head outputs) allProgs)
     EvalError msg -> error $ "evalProgramById returned error:" ++ show msg
 
   where 
