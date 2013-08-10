@@ -38,6 +38,10 @@ library
                   , pretty
                   , containers
                   , random
+                  , stm
+                  , async
+                  , logict
+                  , mtl
 
   hs-source-dirs:   server-api, solver-lib, client-lib
   exposed-modules:  ServerAPI
@@ -45,6 +49,7 @@ library
                   , Gen
                   , RandomBV
                   , Filter
+                  , ParSearch
                   , PP
                   , HsClient
                   , FileClient
@@ -65,6 +70,7 @@ executable client
                   , optparse-applicative >= 0.5.2.1
                   , smallcheck
                   , containers
+  ghc-options: -threaded
 
 -- executable benchmark
 --   Default-language:    Haskell2010

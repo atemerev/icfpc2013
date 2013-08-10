@@ -7,13 +7,14 @@ import HsClient (evalProgramById, guessProgram)
 import Gen (generateRestrictedUpTo)
 import Filter (filterProgs, filterByCached)
 import PP (ppProg)
-import Control.Exception (evaluate)
+import ParSearch
+import Control.Exception
 import System.Timeout
 
 solve :: String -> Int -> [String] -> IO ()
 solve progId size operations = solve' progId (generateRestrictedUpTo size operations)
 
-solve' :: String -> [ExpC] -> IO ()
+solve' :: String -> PS ExpC -> IO ()
 solve' progId allProgs = do
   evalRes <- evalProgramById progId bvs
   case evalRes of
@@ -24,7 +25,9 @@ solve' progId allProgs = do
     loop pId inputs outputs programs = do
       let
         candidates = filterProgs inputs outputs programs
-        first = head candidates
+      first <-
+        maybe (throwIO $ ErrorCall "Nothing has been found") return
+        =<< runPS candidates 4 {- FIXME -} (== 3)
         -- mapM_ (putStrLn . ppProg) candidates
       print first
       gr <- guessProgram pId (ppProg first)
