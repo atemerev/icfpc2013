@@ -148,7 +148,7 @@ foldImpl eval !x !seed body = op x0 (op x1 (op x2 (op x3 (op x4 (op x5 (op x6 (o
     (!x0', !x0) = x1' `divMod` 256
 
 evalOnSeed :: MWord64 -> MWord64 -> Exp -> MWord64
-evalOnSeed fold1 fold2 e = {-# SCC "evalOnSeed" #-}
+evalOnSeed !fold1 !fold2 e = {-# SCC "evalOnSeed" #-}
   case e of
     Zero -> just64 0
     One -> just64 1
