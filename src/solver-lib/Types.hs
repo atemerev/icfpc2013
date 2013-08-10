@@ -9,7 +9,7 @@ module Types
   , progSize
   , expSize
   , expCSize
-  , zero, one, mainArg, if0, fold_, not_, shl1, shr1, shr4, shr16, and_ , or_ , xor_, plus 
+  , zero, one, mainArg, fold1Arg, fold2Arg, if0, fold_, not_, shl1, shr1, shr4, shr16, and_ , or_ , xor_, plus 
   )
   where
 
@@ -62,9 +62,8 @@ isConstExpr (Xor a b) = isConstExprC a && isConstExprC b
 isConstExpr (Plus a b) = isConstExprC a && isConstExprC b
 
 eval :: Word64 -> Word64 -> Word64 -> ExpC -> Word64
-eval main fold1 fold2 e 
-  | main == seed = cached e
-  | otherwise = case expr e of
+eval main fold1 fold2 e = 
+  case expr e of
     Zero -> 0
     One -> 1
     MainArg -> main
@@ -101,8 +100,8 @@ foldImpl main !x !seed body = op x0 (op x1 (op x2 (op x3 (op x4 (op x5 (op x6 (o
 zero = ExpC 0 Zero
 one  = ExpC 1 One
 mainArg = ExpC seed MainArg
--- fold1Arg =   | Fold1Arg
--- fold2Arg =   | Fold2Arg
+fold1Arg = undefined -- TODO
+fold2Arg = undefined -- TODO
 if0 a b c = ExpC (if (cached a) == 0 then cached b else cached c) (If a b c)
 fold_ a b c =  ExpC (foldImpl seed (cached a) (cached b) c) (Fold a b c)
 not_ a   = ExpC (complement (cached a)) (Not a)
