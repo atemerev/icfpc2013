@@ -1,5 +1,5 @@
 {-# LANGUAGE ImplicitParams #-}
-module Gen (generateRestricted, serProg, noRestriction, restrictionFromList, OpName(..)) where
+module Gen (generateRestricted, generateRestrictedUpTo, serProg, noRestriction, restrictionFromList, OpName(..)) where
 
 import Types
 import Test.SmallCheck
@@ -26,6 +26,79 @@ restrictionFromList rs = sum [
     (if r == Fold_op then 1 `shiftL` 10 else 0)
     | r <- rs
     ]
+
+isSimple :: Exp -> Bool
+
+isSimple Zero = True
+isSimple One = True
+isSimple e | isConstExpr e && (\v -> v == 0 || v == 1) (eval 0 0 0 e) = False
+isSimple e = isSimpleHead e && isSimpleParts e
+
+isSimpleHead Zero = True
+isSimpleHead One = True
+isSimpleHead MainArg = True
+isSimpleHead Fold1Arg = True
+isSimpleHead Fold2Arg = True
+
+isSimpleHead (If (Not a) b c) = False
+isSimpleHead (If a b c) = True
+
+isSimpleHead (Fold a b c) = True
+
+isSimpleHead (Not (Not a)) = False
+isSimpleHead (Not a) = True
+
+isSimpleHead (Shl1 a) = True
+
+isSimpleHead (Shr1 a) = True
+
+isSimpleHead (Shr4 (Shr1 a)) = False
+isSimpleHead (Shr4 a) = True
+
+isSimpleHead (Shr16 (Shr1 a)) = False
+isSimpleHead (Shr16 (Shr4 a)) = False
+isSimpleHead (Shr16 a) = True
+
+isSimpleHead (And Zero b) = False
+isSimpleHead (And a Zero) = False
+-- Normal form: first operand must be smaller in size
+isSimpleHead (And a b) | expSize a > expSize b || a >= b = False
+isSimpleHead (And a b) = True
+
+isSimpleHead (Or Zero b) = False
+isSimpleHead (Or a Zero) = False
+isSimpleHead (Or a b) | expSize a > expSize b || a >= b = False
+isSimpleHead (Or a b) = True
+
+isSimpleHead (Xor Zero b) = False
+isSimpleHead (Xor a Zero) = False
+isSimpleHead (Xor a b) | expSize a > expSize b || a >= b = False
+isSimpleHead (Xor a b) = True
+
+isSimpleHead (Plus Zero b) = False
+isSimpleHead (Plus a Zero) = False
+isSimpleHead (Plus a b) | expSize a > expSize b || a >= b = False
+isSimpleHead (Plus a b) = True
+
+isSimpleParts Zero = True
+isSimpleParts One = True
+isSimpleParts MainArg = True
+isSimpleParts Fold1Arg = True
+isSimpleParts Fold2Arg = True
+isSimpleParts (If a b c) = isSimple a && isSimple b && isSimple c
+isSimpleParts (Fold a b c) = isSimple a && isSimple b && isSimple c
+isSimpleParts (Not a) = isSimple a
+isSimpleParts (Shl1 a) = isSimple a
+isSimpleParts (Shr1 a) = isSimple a
+isSimpleParts (Shr4 a) = isSimple a
+isSimpleParts (Shr16 a) = isSimple a
+isSimpleParts (And a b) = isSimple a && isSimple b
+isSimpleParts (Or a b) = isSimple a && isSimple b
+isSimpleParts (Xor a b) = isSimple a && isSimple b
+isSimpleParts (Plus a b) = isSimple a && isSimple b
+
+generateRestrictedUpTo :: Int -> [String] -> [Exp] -- allowed ops are passed as string list
+generateRestrictedUpTo n rst = concat [generateRestricted i rst | i <- [1..n]]
 
 generateRestricted :: Int -> [String] -> [Exp] -- allowed ops are passed as string list
 generateRestricted n rst = 
@@ -58,7 +131,7 @@ generateRestricted' tfold n restriction =
     foldBodies = do
       n <- getDepth
       let filledCache = let ?cache = M.empty
-                        in M.fromList [((i, InFoldBody), list i (serExp' i restriction InFoldBody))
+                        in M.fromList [((i, InFoldBody), [(e,f) | (e,f) <- list i (serExp' i restriction InFoldBody), isSimple e])
                                       | i <- [cacheMin .. min n cacheMax]
                                       ]
       let ?cache = filledCache
@@ -112,7 +185,7 @@ serExpression restriction = do
   let ?tfold = False
   n <- getDepth
   let filledCache = let ?cache = M.empty
-                    in M.fromList [((i, fs), list i (serExp' i restriction fs))
+                    in M.fromList [((i, fs), [(e,f) | (e,f) <- (list i (serExp' i restriction fs)), isSimple e])
                                   | i <- [cacheMin .. min n cacheMax],
                                     fs <- [NoFold, ExternalFold, InFoldBody]
                                    ]
@@ -163,7 +236,9 @@ serIf n restriction fs = do
     else do
       (b, foldB) <- serExp' sizeB restriction (if foldA then ExternalFold else fs)
       (c, foldC) <- serExp' sizeC restriction (if (foldA || foldB) then ExternalFold else fs)
-      return (If a b c, foldA || foldB || foldC)
+      if isSimpleHead (If a b c)
+        then return (If a b c, foldA || foldB || foldC)
+        else mzero
 
 serFold :: (Monad m, ?tfold :: Bool, ?cache :: Cache) => Int -> Restriction -> Series m (Exp, Bool)
 serFold n restriction = do
@@ -173,20 +248,27 @@ serFold n restriction = do
   (a, foldA) <- serExp' sizeArg restriction ExternalFold
   (b, foldB) <- serExp' sizeSeed restriction ExternalFold
   (c, foldC) <- serExp' sizeBody restriction InFoldBody
-  return (Fold a b c, True)
+  if isSimpleHead (Fold a b c)
+    then return (Fold a b c, True)
+    else mzero
 
 serUnop :: (Monad m, ?tfold :: Bool, ?cache :: Cache) => Int -> Restriction -> FoldState -> (Exp -> Exp) -> Series m (Exp, Bool)
 serUnop n restriction fs op = do
   (a, foldA) <- serExp' (n-1) restriction fs
-  return (op a, foldA)
+  if isSimpleHead (op a)
+    then return (op a, foldA)
+    else mzero
 
 serBinop :: (Monad m, ?tfold :: Bool, ?cache :: Cache) => Int -> Restriction -> FoldState -> (Exp -> Exp -> Exp) -> Series m (Exp, Bool)
 serBinop n restriction fs op = do
   sizeA <- elements [1..n - 2]
   let sizeB = n - 1 - sizeA
-  if sizeB > sizeA
+  -- Normal form: first operand must be smaller in size
+  if sizeA > sizeB
     then mzero
     else do
       (a, foldA) <- serExp' sizeA restriction fs
       (b, foldB) <- serExp' sizeB restriction (if foldA then ExternalFold else fs)
-      return (op a b, foldA || foldB)
+      if isSimpleHead (op a b)
+        then return (op a b, foldA || foldB)
+        else mzero

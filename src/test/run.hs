@@ -63,27 +63,6 @@ evalTests = testGroup "Evaluation" $
     ev_ prog = ev prog undefined
     two = Plus One One
 
-progSize :: Exp -> Int
-progSize e = expSize e + 1
-
-expSize :: Exp -> Int
-expSize Zero = 1
-expSize One = 1
-expSize MainArg = 1
-expSize Fold1Arg = 1
-expSize Fold2Arg = 1
-expSize (If a b c) = 1 + expSize a + expSize b + expSize c
-expSize (Fold a b c) = 2 + expSize a + expSize b + expSize c
-expSize (Not a) = 1 + expSize a
-expSize (Shl1 a) = 1 + expSize a
-expSize (Shr1 a) = 1 + expSize a
-expSize (Shr4 a) = 1 + expSize a
-expSize (Shr16 a) = 1 + expSize a
-expSize (And a b) = 1 + expSize a + expSize b
-expSize (Or a b) = 1 + expSize a + expSize b
-expSize (Xor a b) = 1 + expSize a + expSize b
-expSize (Plus a b) = 1 + expSize a + expSize b
-
 isValid :: Exp -> Bool
 isValid e = noBrokenRefs e && (numFolds e <= 1)
   where

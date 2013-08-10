@@ -4,6 +4,8 @@ module Types
   , Word64
   , eval
   , isConstExpr
+  , progSize
+  , expSize
   )
   where
 
@@ -34,8 +36,8 @@ data Exp where
 isConstExpr Zero = True
 isConstExpr One = True
 isConstExpr MainArg = False
-isConstExpr Fold1Arg = True
-isConstExpr Fold2Arg = True
+isConstExpr Fold1Arg = False
+isConstExpr Fold2Arg = False
 isConstExpr (If a b c) = isConstExpr a && isConstExpr b && isConstExpr c
 isConstExpr (Fold a b c) = isConstExpr a && isConstExpr b && isConstExpr c
 isConstExpr (Not a) = isConstExpr a
@@ -82,4 +84,25 @@ eval main fold1 fold2 e = eval' e
             (x2', x2) = x3' `divMod` 256
             (x1', x1) = x2' `divMod` 256
             (x0', x0) = x1' `divMod` 256
+
+progSize :: Exp -> Int
+progSize e = expSize e + 1
+
+expSize :: Exp -> Int
+expSize Zero = 1
+expSize One = 1
+expSize MainArg = 1
+expSize Fold1Arg = 1
+expSize Fold2Arg = 1
+expSize (If a b c) = 1 + expSize a + expSize b + expSize c
+expSize (Fold a b c) = 2 + expSize a + expSize b + expSize c
+expSize (Not a) = 1 + expSize a
+expSize (Shl1 a) = 1 + expSize a
+expSize (Shr1 a) = 1 + expSize a
+expSize (Shr4 a) = 1 + expSize a
+expSize (Shr16 a) = 1 + expSize a
+expSize (And a b) = 1 + expSize a + expSize b
+expSize (Or a b) = 1 + expSize a + expSize b
+expSize (Xor a b) = 1 + expSize a + expSize b
+expSize (Plus a b) = 1 + expSize a + expSize b
 
