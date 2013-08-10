@@ -5135,6 +5135,8 @@
     "id": "Dz6DnI4elhmlDRNgKwTp5SaP"
   },
   {
+    "timeLeft": 232.97899999999998,
+    "solved": true,
     "operators": [
       "fold",
       "or",
