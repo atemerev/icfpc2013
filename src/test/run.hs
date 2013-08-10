@@ -11,19 +11,20 @@ import Control.Monad
 
 import Types
 import Gen
+import RandomBV (bvs)
 
 main = defaultMain allTests
 
 allTests = testGroup "Tests"
   [ generatorTests, evalTests ]
 
-generatorTests = localOption (SmallCheckDepth 7) $ testGroup "Generation"
+generatorTests = localOption (SmallCheckDepth 12) $ testGroup "Generation"
   [ testProperty "Programs have correct size" $
       \n -> changeDepth (const n) $
-        over (serProg noRestriction) $ \prog -> progSize prog == n
+        over (serProg noRestriction) $ \prog -> progSize (expr prog) == n
   , testProperty "Programs are valid" $
       \n -> changeDepth (const n) $
-        over (serProg noRestriction) isValid
+        over (serProg noRestriction) (isValid.expr)
   , localOption (SmallCheckDepth 5) $ testProperty "Operator restrictions" $
       \n ->
       over restrictionSeries $ \ops ->
@@ -31,75 +32,81 @@ generatorTests = localOption (SmallCheckDepth 7) $ testGroup "Generation"
       S.fromList (filter (checkRestriction ops)
         (list n (serProg noRestriction)))
         == S.fromList (list n (serProg (restrictionFromList ops)))
+  , testProperty "Programs have correct cached value for seed" $
+      \n -> changeDepth (const n) $
+        over (serProg noRestriction) $ \prog -> cached prog == eval (head bvs) undefined undefined prog
   ]
 
 evalTests = testGroup "Evaluation" $
   [ testCase "Main arg" $
-      ev MainArg 0x42 @?= 0x42
+      ev mainArg 0x42 @?= 0x42
   , testCase "If0 true" $
-      ev_ (If Zero One two) @?= 1
+      ev_ (if0 zero one two) @?= 1
   , testCase "If0 false" $
-      ev_ (If two One two) @?= 2
+      ev_ (if0 two one two) @?= 2
   , testCase "Not" $
-      ev (Not MainArg)   0x00FF0FF000000000 @?= 0xFF00F00FFFFFFFFF
+      ev (not_ mainArg)   0x00FF0FF000000000 @?= 0xFF00F00FFFFFFFFF
   , testCase "Shl1" $
-      ev (Shl1 MainArg)  0xFFFFFFFFFFFFFFFF @?= 0xFFFFFFFFFFFFFFFE
+      ev (shl1 mainArg)  0xFFFFFFFFFFFFFFFF @?= 0xFFFFFFFFFFFFFFFE
   , testCase "Shr1" $
-      ev (Shr1 MainArg)  0xFFFFFFFFFFFFFFFF @?= 0x7FFFFFFFFFFFFFFF
+      ev (shr1 mainArg)  0xFFFFFFFFFFFFFFFF @?= 0x7FFFFFFFFFFFFFFF
   , testCase "Shr4" $
-      ev (Shr4 MainArg)  0xFFFFFFFFFFFFFFFF @?= 0x0FFFFFFFFFFFFFFF
+      ev (shr4 mainArg)  0xFFFFFFFFFFFFFFFF @?= 0x0FFFFFFFFFFFFFFF
   , testCase "Shr16" $
-      ev (Shr16 MainArg) 0xFFFFFFFFFFFFFFFF @?= 0x0000FFFFFFFFFFFF
+      ev (shr16 mainArg) 0xFFFFFFFFFFFFFFFF @?= 0x0000FFFFFFFFFFFF
   , testCase "Plus" $
-      ev (Plus MainArg MainArg) 0xFFFFFFFFFFFFFFFF @?= 0xFFFFFFFFFFFFFFFE
+      ev (plus mainArg mainArg) 0xFFFFFFFFFFFFFFFF @?= 0xFFFFFFFFFFFFFFFE
   , testCase "Fold (commutative)" $
-      ev (Fold MainArg Zero (Plus Fold1Arg Fold2Arg)) 0x110318FF1609AA98 @?= 652
+      ev (fold_ mainArg zero (plus fold1Arg fold2Arg)) 0x110318FF1609AA98 @?= 652
   , testCase "Fold (non-commutative)" $
-      ev (Fold MainArg Zero (Plus (Shl1 Fold1Arg) Fold2Arg)) 0x110318FF1609AA98 @?= 1304
+      ev (fold_ mainArg zero (plus (shl1 fold1Arg) fold2Arg)) 0x110318FF1609AA98 @?= 1304
   ]
 
   where
     ev prog x = eval x undefined undefined prog
     ev_ prog = ev prog undefined
-    two = Plus One One
+    two = plus one one
 
 isValid :: Exp -> Bool
 isValid e = noBrokenRefs e && (numFolds e <= 1)
   where
+    numFoldsC (ExpC _ e) = numFolds e
     numFolds Zero = 0
     numFolds One = 0
     numFolds MainArg = 0
     numFolds Fold1Arg = 0
     numFolds Fold2Arg = 0
-    numFolds (If a b c) = numFolds a + numFolds b + numFolds c
-    numFolds (Fold a b c) = 1 + numFolds a + numFolds b + numFolds c
-    numFolds (Not a) = numFolds a
-    numFolds (Shl1 a) = numFolds a
-    numFolds (Shr1 a) = numFolds a
-    numFolds (Shr4 a) = numFolds a
-    numFolds (Shr16 a) = numFolds a
-    numFolds (And a b) = numFolds a + numFolds b
-    numFolds (Or a b) = numFolds a + numFolds b
-    numFolds (Xor a b) = numFolds a + numFolds b
-    numFolds (Plus a b) = numFolds a + numFolds b
+    numFolds (If a b c) = numFoldsC a + numFoldsC b + numFoldsC c
+    numFolds (Fold a b c) = 1 + numFoldsC a + numFoldsC b + numFoldsC c
+    numFolds (Not a) = numFoldsC a
+    numFolds (Shl1 a) = numFoldsC a
+    numFolds (Shr1 a) = numFoldsC a
+    numFolds (Shr4 a) = numFoldsC a
+    numFolds (Shr16 a) = numFoldsC a
+    numFolds (And a b) = numFoldsC a + numFoldsC b
+    numFolds (Or a b) = numFoldsC a + numFoldsC b
+    numFolds (Xor a b) = numFoldsC a + numFoldsC b
+    numFolds (Plus a b) = numFoldsC a + numFoldsC b
 
     -- Checks that there are no references to Fold1Arg or Fold2Arg outside a Fold.
+    noBrokenRefsC (ExpC _ e) = noBrokenRefs e
+    
     noBrokenRefs Zero = True
     noBrokenRefs One = True
     noBrokenRefs MainArg = True
     noBrokenRefs Fold1Arg = False
     noBrokenRefs Fold2Arg = False
-    noBrokenRefs (If a b c) = noBrokenRefs a && noBrokenRefs b && noBrokenRefs c
+    noBrokenRefs (If a b c) = noBrokenRefsC a && noBrokenRefsC b && noBrokenRefsC c
     noBrokenRefs (Fold a b c) = True
-    noBrokenRefs (Not a) = noBrokenRefs a
-    noBrokenRefs (Shl1 a) = noBrokenRefs a
-    noBrokenRefs (Shr1 a) = noBrokenRefs a
-    noBrokenRefs (Shr4 a) = noBrokenRefs a
-    noBrokenRefs (Shr16 a) = noBrokenRefs a
-    noBrokenRefs (And a b) = noBrokenRefs a && noBrokenRefs b
-    noBrokenRefs (Or a b) = noBrokenRefs a && noBrokenRefs b
-    noBrokenRefs (Xor a b) = noBrokenRefs a && noBrokenRefs b
-    noBrokenRefs (Plus a b) = noBrokenRefs a && noBrokenRefs b
+    noBrokenRefs (Not a) = noBrokenRefsC a
+    noBrokenRefs (Shl1 a) = noBrokenRefsC a
+    noBrokenRefs (Shr1 a) = noBrokenRefsC a
+    noBrokenRefs (Shr4 a) = noBrokenRefsC a
+    noBrokenRefs (Shr16 a) = noBrokenRefsC a
+    noBrokenRefs (And a b) = noBrokenRefsC a && noBrokenRefsC b
+    noBrokenRefs (Or a b) = noBrokenRefsC a && noBrokenRefsC b
+    noBrokenRefs (Xor a b) = noBrokenRefsC a && noBrokenRefsC b
+    noBrokenRefs (Plus a b) = noBrokenRefsC a && noBrokenRefsC b
 
 expOps :: Exp -> S.Set OpName
 expOps = S.unions . map nodeToOp . universe
@@ -123,6 +130,6 @@ restrictionSeries :: Monad m => Series m [OpName]
 restrictionSeries =
   generate $ \_ -> filterM (const [False,True]) [Not_op, Shl1_op, Shr1_op, Shr4_op, Shr16_op, And_op, Or_op, Xor_op, Plus_op, If_op, Fold_op]
 
-checkRestriction :: [OpName] -> Exp -> Bool
+checkRestriction :: [OpName] -> ExpC -> Bool
 checkRestriction strs e =
-  expOps e `S.isSubsetOf` (S.fromList strs)
+  expOps (expr e) `S.isSubsetOf` (S.fromList strs)
