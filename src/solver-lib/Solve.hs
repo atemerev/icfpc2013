@@ -11,10 +11,10 @@ import ParSearch
 import Control.Exception
 import System.Timeout
 
-solve :: String -> Int -> [String] -> IO ()
+solve :: Int -> String -> Int -> [String] -> IO ()
 solve progId size operations = solve' progId (generateRestrictedUpTo size operations)
 
-solve' :: String -> PS ExpC -> IO ()
+solve' :: Int -> String -> PS ExpC ExpC -> IO ()
 solve' progId allProgs = do
   evalRes <- evalProgramById progId bvs
   case evalRes of
@@ -27,7 +27,7 @@ solve' progId allProgs = do
         candidates = filterProgs inputs outputs programs
       first <-
         maybe (throwIO $ ErrorCall "Nothing has been found") return
-        =<< runPS candidates 4 {- FIXME -} (== 3)
+        =<< runPS candidates 4 (<= 3)
         -- mapM_ (putStrLn . ppProg) candidates
       print first
       gr <- guessProgram pId (ppProg first)

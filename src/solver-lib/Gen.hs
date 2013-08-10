@@ -252,7 +252,7 @@ serIf n restriction fs = do
         else mzero
 
 serFold :: (MonadLevel m, ?tfold :: Bool, ?cache :: Cache) => Int -> Restriction -> m (ExpC, Bool)
-serFold n restriction = do
+serFold n restriction = level $ do
   sizeArg <- elements [1..n - 4]
   sizeSeed <- elements [1..n - 3 - sizeArg]
   let sizeBody = n - 2 - sizeArg - sizeSeed
@@ -264,14 +264,14 @@ serFold n restriction = do
     else mzero
 
 serUnop :: (MonadLevel m, ?tfold :: Bool, ?cache :: Cache) => Int -> Restriction -> FoldState -> (ExpC -> ExpC) -> m (ExpC, Bool)
-serUnop n restriction fs op = do
+serUnop n restriction fs op = level $ do
   (a, foldA) <- serExp' (n-1) restriction fs
   if isSimpleHead (expr (op a))
-    then level $ return (op a, foldA)
+    then return (op a, foldA)
     else mzero
 
 serBinop :: (MonadLevel m, ?tfold :: Bool, ?cache :: Cache) => Int -> Restriction -> FoldState -> (ExpC -> ExpC -> ExpC) -> m (ExpC, Bool)
-serBinop n restriction fs op = do
+serBinop n restriction fs op = level $ do
   sizeA <- elements [1..n - 2]
   let sizeB = n - 1 - sizeA
   -- Normal form: first operand must be smaller in size
@@ -282,5 +282,5 @@ serBinop n restriction fs op = do
       guard $ expr a /= Zero -- all binary ops (and, or, xor, plus) are stupid if first arg is zero
       (b, foldB) <- serExp' sizeB restriction (if foldA then ExternalFold else fs)
       if isSimpleHead (expr (op a b))
-        then level $ return (op a b, foldA || foldB)
+        then return (op a b, foldA || foldB)
         else mzero

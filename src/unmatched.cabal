@@ -50,6 +50,7 @@ library
                   , RandomBV
                   , Filter
                   , ParSearch
+                  , ParSearch.Logic
                   , PP
                   , HsClient
                   , FileClient
