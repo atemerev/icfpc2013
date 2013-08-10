@@ -8,6 +8,7 @@ import Control.Applicative
 import Control.Monad
 import Data.Maybe (catMaybes)
 import Data.Bits
+import ParSearch
 import qualified Data.Map as M
 
 import Debug.Trace
@@ -113,10 +114,10 @@ isSimpleParts (Or a b) = isSimpleC a && isSimpleC b
 isSimpleParts (Xor a b) = isSimpleC a && isSimpleC b
 isSimpleParts (Plus a b) = isSimpleC a && isSimpleC b
 
-generateRestrictedUpTo :: Int -> [String] -> [ExpC] -- allowed ops are passed as string list
-generateRestrictedUpTo n rst = concat [generateRestricted i rst | i <- [1..n]]
+generateRestrictedUpTo :: MonadLevel m => Int -> [String] -> m ExpC -- allowed ops are passed as string list
+generateRestrictedUpTo n rst = elements [1..n] >>= \i -> generateRestricted i rst
 
-generateRestricted :: Int -> [String] -> [ExpC] -- allowed ops are passed as string list
+generateRestricted :: MonadLevel m => Int -> [String] -> m ExpC -- allowed ops are passed as string list
 generateRestricted n rst = 
   generateRestricted' tfold n restriction
   where
@@ -135,19 +136,18 @@ generateRestricted n rst =
     parse "fold" = Fold_op
     parse other = error $ "failed to parse operation " ++ other
 
-generateRestricted' :: Bool -> Int -> Restriction -> [ExpC]
+generateRestricted' :: MonadLevel m => Bool -> Int -> Restriction -> m ExpC
 generateRestricted' tfold n restriction = 
   if tfold
   then
     let ?tfold = True
-    in map (\e -> fold_ mainArg zero e) $ list (n-5) foldBodies -- |fold x 0| is 2 + 1 + 1, hence n-4, and another -1 for top-level lambda
-  else list n (serProg restriction)
+    in (\e -> fold_ mainArg zero e) `liftM` foldBodies (n-5) -- |fold x 0| is 2 + 1 + 1, hence n-4, and another -1 for top-level lambda
+  else serProg n restriction
   where
-    foldBodies :: (?tfold :: Bool, Monad m) => Series m ExpC
-    foldBodies = do
-      n <- getDepth
+    foldBodies :: (?tfold :: Bool, MonadLevel m) => Int -> m ExpC
+    foldBodies n = do
       let filledCache = let ?cache = M.empty
-                        in M.fromList [((i, InFoldBody), [(e,f) | (e,f) <- list i (serExp' i restriction InFoldBody), isSimpleC e, usesFold2Arg e, usesFold1Arg e])
+                        in M.fromList [((i, InFoldBody), [(e,f) | (e,f) <- serExp' i restriction InFoldBody, isSimpleC e, usesFold2Arg e, usesFold1Arg e])
                                       | i <- [cacheMin .. min n cacheMax]
                                       ]
       let ?cache = filledCache
@@ -193,16 +193,15 @@ allowedFold :: Restriction -> Bool
 allowedFold r = allowed r Fold_op
       
 -- 
-serProg :: Monad m => Restriction -> Series m ExpC
-serProg restriction = decDepth (serExpression restriction)-- remove 1 level of depth for top-level lambda
+serProg :: MonadLevel m => Int -> Restriction -> m ExpC
+serProg n restriction = serExpression (n-1) restriction-- remove 1 level of depth for top-level lambda
 
 -- a top-level expression, no tfold
-serExpression :: (Monad m) => Restriction -> Series m ExpC
-serExpression restriction = do
+serExpression :: (MonadLevel m) => Int -> Restriction -> m ExpC
+serExpression n restriction = do
   let ?tfold = False
-  n <- getDepth
   let filledCache = let ?cache = M.empty
-                    in M.fromList [((i, fs), [(e,f) | (e,f) <- (list i (serExp' i restriction fs)), isSimpleC e, fs /= InFoldBody || usesFold2Arg e])
+                    in M.fromList [((i, fs), [(e,f) | (e,f) <- (serExp' i restriction fs), isSimpleC e, fs /= InFoldBody || usesFold2Arg e])
                                   | i <- [cacheMin .. min n cacheMax],
                                     fs <- [NoFold, ExternalFold, InFoldBody]
                                    ]
@@ -215,7 +214,7 @@ data FoldState = NoFold -- Allowed to generate unrestricted expression except re
                | InFoldBody -- Allowed to generate references to fold args but not folds
                deriving (Eq, Show, Ord)
 
-elements :: (MonadPlus m) => [a] -> m a
+elements :: (MonadLevel m) => [a] -> m a
 elements = msum . map return
 
 type Cache = M.Map (Int, FoldState) [(ExpC, Bool)]
@@ -223,7 +222,7 @@ cacheMin = 3
 cacheMax = 7
 
 -- Generates (expression, does it contain a fold?)
-serExp' :: (MonadPlus m, ?tfold :: Bool, ?cache :: Cache) => Int -> Restriction -> FoldState -> m (ExpC, Bool)
+serExp' :: (MonadLevel m, ?tfold :: Bool, ?cache :: Cache) => Int -> Restriction -> FoldState -> m (ExpC, Bool)
 serExp' n _ _ | n < 1 = mzero
 -- if tfold is set, the only occurrence of MainArg is at the toplevel
 serExp' 1 _ InFoldBody = if ?tfold
@@ -242,7 +241,7 @@ serExp' n restriction fs = msum $ concat [
   map (\op -> serUnop n restriction fs op) (allowedUnaryOps restriction),
   map (\op -> serBinop n restriction fs op) (allowedBinaryOps restriction)]
 
-serIf :: (MonadPlus m, ?tfold :: Bool, ?cache :: Cache) => Int -> Restriction -> FoldState -> m (ExpC, Bool)
+serIf :: (MonadLevel m, ?tfold :: Bool, ?cache :: Cache) => Int -> Restriction -> FoldState -> m (ExpC, Bool)
 serIf n restriction fs = do
   sizeA <- elements [1..n - 3]
   (a, foldA) <- serExp' sizeA restriction fs
@@ -257,8 +256,8 @@ serIf n restriction fs = do
         then return (if0 a b c, foldA || foldB || foldC)
         else mzero
 
-serFold :: (MonadPlus m, ?tfold :: Bool, ?cache :: Cache) => Int -> Restriction -> m (ExpC, Bool)
-serFold n restriction = do
+serFold :: (MonadLevel m, ?tfold :: Bool, ?cache :: Cache) => Int -> Restriction -> m (ExpC, Bool)
+serFold n restriction = level $ do
   sizeArg <- elements [1..n - 4]
   sizeSeed <- elements [1..n - 3 - sizeArg]
   let sizeBody = n - 2 - sizeArg - sizeSeed
@@ -313,15 +312,15 @@ usesFold1Arg (ExpC _ e) = u e
 
     
     
-serUnop :: (MonadPlus m, ?tfold :: Bool, ?cache :: Cache) => Int -> Restriction -> FoldState -> (ExpC -> ExpC) -> m (ExpC, Bool)
-serUnop n restriction fs op = do
+serUnop :: (MonadLevel m, ?tfold :: Bool, ?cache :: Cache) => Int -> Restriction -> FoldState -> (ExpC -> ExpC) -> m (ExpC, Bool)
+serUnop n restriction fs op = level $ do
   (a, foldA) <- serExp' (n-1) restriction fs
   if isSimpleHead (expr (op a))
     then return (op a, foldA)
     else mzero
 
-serBinop :: (MonadPlus m, ?tfold :: Bool, ?cache :: Cache) => Int -> Restriction -> FoldState -> (ExpC -> ExpC -> ExpC) -> m (ExpC, Bool)
-serBinop n restriction fs op = do
+serBinop :: (MonadLevel m, ?tfold :: Bool, ?cache :: Cache) => Int -> Restriction -> FoldState -> (ExpC -> ExpC -> ExpC) -> m (ExpC, Bool)
+serBinop n restriction fs op = level $ do
   sizeA <- elements [1..n - 2]
   let sizeB = n - 1 - sizeA
   -- Normal form: first operand must be smaller in size
