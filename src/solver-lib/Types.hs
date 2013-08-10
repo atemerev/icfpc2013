@@ -116,6 +116,7 @@ foldImpl eval !x !seed body = op x0 (op x1 (op x2 (op x3 (op x4 (op x5 (op x6 (o
 
 evalOnSeed :: (?foldArgs :: Maybe (Word64, Word64)) => Exp -> Maybe Word64
 evalOnSeed e =
+  maybe Nothing (Just $!) $
   case e of
     Zero -> Just 0
     One -> Just 1
