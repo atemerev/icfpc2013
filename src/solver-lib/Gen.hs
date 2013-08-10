@@ -117,7 +117,7 @@ generateRestricted n rst =
   generateRestricted' tfold n restriction
   where
     tfold = "tfold" `elem` rst
-    restriction = restrictionFromList $ map parse $ filter (/="tfold") rst
+    restriction = restrictionFromList $ map parse $ filter (/="bonus") $ filter (/="tfold") rst
     parse "not" = Not_op
     parse "shl1" = Shl1_op
     parse "shr1" = Shr1_op
