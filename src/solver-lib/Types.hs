@@ -126,7 +126,7 @@ evalOnSeed e =
       let
         evalFn :: Word64 -> Word64 -> ExpC -> Word64
         evalFn f1Arg f2Arg body =
-          let ?foldArgs = (f1Arg, f2Arg)
+          let ?foldArgs = Just (f1Arg, f2Arg)
           in fromMaybe (error "evalOnSeed.Fold") $ ev body
       in foldImpl evalFn <$> ev a <*> ev b <*> pure c
     Not a   -> complement <$> ev a
@@ -139,6 +139,7 @@ evalOnSeed e =
     Xor a b -> xor <$> ev a <*> ev b
     Plus a b -> (+) <$> ev a <*> ev b
   where
+    ev :: (?foldArgs :: Maybe (Word64, Word64)) => ExpC -> Maybe Word64
     ev x =
       mplus (cached x) $ -- if x's value is known, just use it
       (if isJust ?foldArgs
