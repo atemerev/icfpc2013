@@ -25,7 +25,12 @@ import RandomBV
 -- Expression that caches result of evaluation on the first bitvector that we would test on
 seed = head bvs
 
-data ExpC = ExpC {cached :: !(Maybe Word64), expr :: Exp} deriving (Eq, Ord, Show, Data, Typeable)
+data ExpC = ExpC {cached :: !(Maybe Word64), expr :: Exp} deriving (Show, Data, Typeable)
+instance Eq ExpC where
+  (ExpC _ a) == (ExpC _ b) = a == b
+instance Ord ExpC where
+  compare (ExpC _ a) (ExpC _ b) = compare a b
+
 data Exp =
     Zero
   | One
