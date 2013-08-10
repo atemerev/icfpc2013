@@ -18,4 +18,4 @@ filterProgs ins outs progs =
 
 -- Filter generated list of expressions by checking if cached valued on known seed argument matches expectation
 filterByCached :: Word64 -> [ExpC] -> [ExpC]
-filterByCached expected progs = filter ((==expected).(fromMaybe (error "no cached value in filterByCached")).cached) progs
+filterByCached expected progs = filter ((==expected).(fromMWord64 (error "no cached value in filterByCached")).cached) progs

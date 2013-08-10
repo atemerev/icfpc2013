@@ -36,7 +36,7 @@ generatorTests = localOption (SmallCheckDepth 8) $ testGroup "Generation"
   , testProperty "Programs have correct cached value for seed" $
       \n -> changeDepth (const n) $
         over (serProg noRestriction) $ \prog -> 
-        fromMaybe (error "no cached value in test") (cached prog) == eval (head bvs) undefined undefined prog
+        fromMWord64 (error "no cached value in test") (cached prog) == eval (head bvs) undefined undefined prog
   ]
 
 evalTests = testGroup "Evaluation" $
