@@ -1,4 +1,4 @@
-{-# LANGUAGE GADTs, DeriveDataTypeable, BangPatterns #-}
+{-# LANGUAGE GADTs, DeriveDataTypeable, BangPatterns, ImplicitParams #-}
 module Types
   ( Exp(..)
   , ExpC(..)
@@ -9,7 +9,7 @@ module Types
   , progSize
   , expSize
   , expCSize
-  , zero, one, mainArg, fold1Arg, fold2Arg, if0, fold_, not_, shl1, shr1, shr4, shr16, and_ , or_ , xor_, plus 
+  , -- zero, one, mainArg, fold1Arg, fold2Arg, if0, fold_, not_, shl1, shr1, shr4, shr16, and_ , or_ , xor_, plus
   )
   where
 
@@ -17,14 +17,17 @@ import Data.Word
 import Data.Bits
 import Data.Data (Data)
 import Data.Typeable (Typeable)
+import Data.Maybe
+import Control.Applicative
+import Control.Monad
 import RandomBV
 
 -- Expression that caches result of evaluation on the first bitvector that we would test on
 seed = head bvs
 
-data ExpC = ExpC {cached :: !Word64, expr :: Exp} deriving (Eq, Ord, Show, Data, Typeable)
+data ExpC = ExpC {cached :: !(Maybe Word64), expr :: Exp} deriving (Eq, Ord, Show, Data, Typeable)
 data Exp =
-    Zero 
+    Zero
   | One
   | MainArg
   | Fold1Arg
@@ -33,13 +36,13 @@ data Exp =
   | Fold { foldArg :: ExpC, foldSeed :: ExpC, foldBody :: ExpC }
   | Not ExpC
   | Shl1 ExpC
-  | Shr1 ExpC 
-  | Shr4 ExpC 
-  | Shr16 ExpC 
-  | And ExpC ExpC 
-  | Or ExpC ExpC 
-  | Xor ExpC ExpC 
-  | Plus ExpC ExpC 
+  | Shr1 ExpC
+  | Shr4 ExpC
+  | Shr16 ExpC
+  | And ExpC ExpC
+  | Or ExpC ExpC
+  | Xor ExpC ExpC
+  | Plus ExpC ExpC
   deriving (Eq, Ord, Show, Data, Typeable)
 
 isConstExprC (ExpC _ e) = isConstExpr e
@@ -62,7 +65,7 @@ isConstExpr (Xor a b) = isConstExprC a && isConstExprC b
 isConstExpr (Plus a b) = isConstExprC a && isConstExprC b
 
 eval :: Word64 -> Word64 -> Word64 -> ExpC -> Word64
-eval main fold1 fold2 e = 
+eval main fold1 fold2 e =
   case expr e of
     Zero -> 0
     One -> 1
@@ -81,11 +84,20 @@ eval main fold1 fold2 e =
     Or e1 e2 -> eval main fold1 fold2 e1 .|. eval main fold1 fold2 e2
     Xor e1 e2 -> xor (eval main fold1 fold2 e1) (eval main fold1 fold2 e2)
     Plus e1 e2 -> eval main fold1 fold2 e1 + eval main fold1 fold2 e2
-    Fold arg seed body -> foldImpl main (eval main fold1 fold2 arg) (eval main fold1 fold2 seed) body
-    
-foldImpl main !x !seed body = op x0 (op x1 (op x2 (op x3 (op x4 (op x5 (op x6 (op x7 seed)))))))
+    Fold arg seed body -> foldImpl (eval main) (eval main fold1 fold2 arg) (eval main fold1 fold2 seed) body
+
+foldImpl
+  :: (Word64 -> Word64 -> ExpC -> Word64)
+    -- ^ function to use for evaluation of fold body. We it may be plain
+    -- 'eval', or its cached version. The arguments are fold1Arg, fold2Arg,
+    -- and body.
+  -> Word64 -- ^ fold1Arg
+  -> Word64 -- ^ fold2Arg
+  -> ExpC   -- ^ body
+  -> Word64
+foldImpl eval !x !seed body = op x0 (op x1 (op x2 (op x3 (op x4 (op x5 (op x6 (op x7 seed)))))))
   where
-    op !a !b = eval main a b body
+    op !a !b = eval a b body
     {-# INLINE op #-}
     -- x7 is least significant, x0 most significant
     (!x7', !x7) = x `divMod` 256
@@ -97,7 +109,49 @@ foldImpl main !x !seed body = op x0 (op x1 (op x2 (op x3 (op x4 (op x5 (op x6 (o
     (!x1', !x1) = x2' `divMod` 256
     (!x0', !x0) = x1' `divMod` 256
 
-zero = ExpC 0 Zero
+evalOnSeed :: (?foldArgs :: Maybe (Word64, Word64)) => Exp -> Maybe Word64
+evalOnSeed e =
+  case e of
+    Zero -> Just 0
+    One -> Just 1
+    MainArg -> Just seed
+    Fold1Arg -> fst <$> ?foldArgs
+    Fold2Arg -> snd <$> ?foldArgs
+    If a b c ->
+      case ev a of
+        Just 0 -> ev b
+        Just _ -> ev c
+        Nothing -> Nothing
+    Fold a b c ->
+      let
+        evalFn :: Word64 -> Word64 -> ExpC -> Word64
+        evalFn f1Arg f2Arg body =
+          let ?foldArgs = (f1Arg, f2Arg)
+          in fromMaybe (error "evalOnSeed.Fold") $ ev body
+      in foldImpl evalFn <$> ev a <*> ev b <*> pure c
+    Not a   -> complement <$> ev a
+    Shl1 a  -> shiftL <$> ev a <*> pure 1
+    Shr1 a  -> shiftR <$> ev a <*> pure 1
+    Shr4 a  -> shiftR <$> ev a <*> pure 4
+    Shr16 a -> shiftR <$> ev a <*> pure 16
+    And a b -> (.&.) <$> ev a <*> ev b
+    Or a b ->  (.|.) <$> ev a <*> ev b
+    Xor a b -> xor <$> ev a <*> ev b
+    Plus a b -> (+) <$> ev a <*> ev b
+  where
+    ev x =
+      mplus (cached x) $ -- if x's value is known, just use it
+      (if isJust ?foldArgs
+        then
+          -- if x's value was unknown but fold args are now in scope, re-evaluate
+          -- the tree
+          evalOnSeed $ expr x
+        else
+          -- otherwise, give up
+          Nothing
+      )
+
+{-zero = ExpC 0 Zero
 one  = ExpC 1 One
 mainArg = ExpC seed MainArg
 fold1Arg = undefined -- TODO
@@ -112,9 +166,7 @@ shr16 a = ExpC (shiftR (cached a) 16) (Shr16 a)
 and_ a b = ExpC ((cached a) .&. (cached b)) (And a b)
 or_ a b = ExpC ((cached a) .|. (cached b)) (Or a b)
 xor_ a b = ExpC ((cached a) `xor` (cached b)) (Xor a b)
-plus a b = ExpC ((cached a) + (cached b)) (Plus a b)
-
-
+plus a b = ExpC ((cached a) + (cached b)) (Plus a b)-}
 
 progSize :: Exp -> Int
 progSize e = expSize e + 1
