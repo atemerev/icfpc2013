@@ -214,8 +214,8 @@ serExp' 1 _ InFoldBody = if ?tfold
                          else msum [return (MainArg, False), return (Zero, False), return (One, False), return (Fold1Arg, False), return (Fold2Arg, False)]
 serExp' 1 _ _ = msum [return (Zero, False), return (One, False), return (MainArg, False)]
 serExp' 2 restriction fs = msum $ map (\op -> serUnop 2 restriction fs op) (allowedUnaryOps restriction)
-serExp' n restriction fs | M.member (n, fs) ?cache = let es = ?cache M.! (n, fs)
-                                                     in elements es
+serExp' n restriction fs
+  | Just es <- M.lookup (n, fs) ?cache = elements es
 serExp' 3 restriction fs = msum $ concat [
   map (\op -> serUnop 3 restriction fs op) (allowedUnaryOps restriction),
   map (\op -> serBinop 3 restriction fs op) (allowedBinaryOps restriction)]
