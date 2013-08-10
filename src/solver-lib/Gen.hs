@@ -145,11 +145,12 @@ generateRestricted' tfold n restriction =
     foldBodies = do
       n <- getDepth
       let filledCache = let ?cache = M.empty
-                        in M.fromList [((i, InFoldBody), [(e,f) | (e,f) <- list i (serExp' i restriction InFoldBody), isSimpleC e])
+                        in M.fromList [((i, InFoldBody), [(e,f) | (e,f) <- list i (serExp' i restriction InFoldBody), isSimpleC e, usesFold2Arg e])
                                       | i <- [cacheMin .. min n cacheMax]
                                       ]
       let ?cache = filledCache
       (e, hasFold) <- serExp' n (restriction .&. complement (1 `shiftL` 10)) InFoldBody -- Fold should not be there, but remove it just in case
+      guard $ usesFold2Arg e
       return e
 
 -- Generators are restricted to allowed function set
@@ -259,13 +260,37 @@ serFold n restriction = do
   sizeArg <- elements [1..n - 4]
   sizeSeed <- elements [1..n - 3 - sizeArg]
   let sizeBody = n - 2 - sizeArg - sizeSeed
-  (a, foldA) <- serExp' sizeArg restriction ExternalFold
-  (b, foldB) <- serExp' sizeSeed restriction ExternalFold
   (c, foldC) <- serExp' sizeBody restriction InFoldBody
+  guard (usesFold2Arg c)
+  -- TODO: is this really true that for tfold we could have ridiculous bodies that do not use foldAcc?
+  (a, foldA) <- serExp' sizeArg restriction $ traceShow ("allowing", ppProg c) ExternalFold
+  (b, foldB) <- serExp' sizeSeed restriction ExternalFold
   if isSimpleHead (Fold a b c)
     then return (fold_ a b c, True)
     else mzero
+    
+usesFold2Arg :: ExpC -> Bool
+usesFold2Arg (ExpC _ e) = u e
+  where
+    u Zero = False
+    u One = False
+    u MainArg = False
+    u Fold1Arg = False
+    u Fold2Arg = True
+    u (If a b c) = usesFold2Arg a || usesFold2Arg b || usesFold2Arg c
+    u (Fold a b c) = usesFold2Arg a || usesFold2Arg b || usesFold2Arg c -- should not happen, but still
+    u (Not a) = usesFold2Arg a
+    u (Shl1 a) = usesFold2Arg a
+    u (Shr1 a) = usesFold2Arg a
+    u (Shr4 a) = usesFold2Arg a
+    u (Shr16 a) = usesFold2Arg a
+    u (And a b) = usesFold2Arg a || usesFold2Arg b
+    u (Or a b) = usesFold2Arg a || usesFold2Arg b
+    u (Xor a b) = usesFold2Arg a || usesFold2Arg b
+    u (Plus a b) = usesFold2Arg a || usesFold2Arg b
 
+    
+    
 serUnop :: (MonadPlus m, ?tfold :: Bool, ?cache :: Cache) => Int -> Restriction -> FoldState -> (ExpC -> ExpC) -> m (ExpC, Bool)
 serUnop n restriction fs op = do
   (a, foldA) <- serExp' (n-1) restriction fs
