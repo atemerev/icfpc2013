@@ -37,7 +37,6 @@ library
                   , pretty
                   , containers
                   , random
-                  , ghc-prim
 
   hs-source-dirs:   server-api, solver-lib, client-lib
   exposed-modules:  ServerAPI
