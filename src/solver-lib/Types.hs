@@ -1,4 +1,4 @@
-{-# LANGUAGE GADTs, DeriveDataTypeable, BangPatterns, ImplicitParams #-}
+{-# LANGUAGE GADTs, DeriveDataTypeable, BangPatterns, ImplicitParams, MagicHash #-}
 module Types
   ( Exp(..)
   , ExpC(..)
@@ -38,19 +38,26 @@ just64 !x = MWord64 1 x
 nothing64 :: MWord64
 nothing64 = MWord64 0 0
 
+isNothing64 :: MWord64 -> Bool
+isNothing64 (MWord64 0 x) = True
+isNothing64 _ = False
+
+unsafeValue64 :: MWord64 -> Word64
+unsafeValue64 (MWord64 _ x) = x
+
 fromMWord64 :: Word64 -> MWord64 -> Word64
-fromMWord64 def (MWord64 1 x) = x
-fromMWord64 def _ = def
+fromMWord64 def x = if isNothing64 x then def else unsafeValue64 x
 
 -- We use this function only when it's cheaper to apply f than to check b :)
 map64 :: (Word64 -> Word64) -> MWord64 -> MWord64
-map64 f (MWord64 b x) = MWord64 b (f x)
+map64 f x = if isNothing64 x then nothing64 else just64 (f (unsafeValue64 x))
 
--- Ditto
 zip64 :: (Word64 -> Word64 -> Word64) -> MWord64 -> MWord64 -> MWord64
-zip64 f (MWord64 bx x) (MWord64 by y) = MWord64 (bx .&. by) (f x y)
+zip64 f x y = if isNothing64 x || isNothing64 y
+              then nothing64
+              else just64 (f (unsafeValue64 x) (unsafeValue64 y))
 
-data ExpC = ExpC {cached :: !MWord64, expr :: Exp} deriving (Show, Data, Typeable)
+data ExpC = ExpC {cached :: {-# UNPACK #-} !MWord64, expr :: Exp} deriving (Show, Data, Typeable)
 instance Eq ExpC where
   (ExpC _ a) == (ExpC _ b) = a == b
 instance Ord ExpC where
@@ -139,7 +146,6 @@ foldImpl eval !x !seed body = op x0 (op x1 (op x2 (op x3 (op x4 (op x5 (op x6 (o
     (!x1', !x1) = x2' `divMod` 256
     (!x0', !x0) = x1' `divMod` 256
 
-
 evalOnSeed :: MWord64 -> MWord64 -> Exp -> MWord64
 evalOnSeed fold1 fold2 e = {-# SCC "evalOnSeed" #-}
   case e of
@@ -149,21 +155,22 @@ evalOnSeed fold1 fold2 e = {-# SCC "evalOnSeed" #-}
     Fold1Arg -> fold1
     Fold2Arg -> fold2
     If a b c ->
-      case ev fold1 fold2 a of
-        MWord64 1 0 -> ev fold1 fold2 b
-        MWord64 1 _ -> ev fold1 fold2 c
-        _ -> nothing64
+      case ev fold1 fold2 a of {
+        x | isNothing64 x -> nothing64
+          | unsafeValue64 x == 0 -> ev fold1 fold2 b
+          | otherwise            -> ev fold1 fold2 c
+      }
 
     Fold a b c ->
       let
         evalFn :: Word64 -> Word64 -> ExpC -> Word64
-        evalFn f1Arg f2Arg body = case ev (just64 f1Arg) (just64 f2Arg) body of {
-          MWord64 1 x -> x
-        ; _ -> error $ "Failed evaluation within fold: (f1,f2,body) = " ++ show (f1Arg, f2Arg, body)
+        evalFn !f1Arg !f2Arg body = case ev (just64 f1Arg) (just64 f2Arg) body of {
+          x | isNothing64 x -> error $ "Failed evaluation within fold: (f1,f2,body) = " ++ show (f1Arg, f2Arg, body)
+            | otherwise -> unsafeValue64 x
         }
       in case (ev fold1 fold2 a, ev fold1 fold2 b) of {
-           (MWord64 1 va, MWord64 1 vb) -> just64 $ foldImpl evalFn va vb c
-         ; _ -> nothing64
+           (x, y) | isNothing64 x || isNothing64 y -> nothing64
+                  | otherwise                      -> just64 $ foldImpl evalFn (unsafeValue64 x) (unsafeValue64 y) c
          }
     Not a   -> map64 complement (ev fold1 fold2 a)
     Shl1 a  -> map64 (\x -> x `shiftL` 1) (ev fold1 fold2 a)
@@ -176,14 +183,14 @@ evalOnSeed fold1 fold2 e = {-# SCC "evalOnSeed" #-}
     Plus a b -> zip64 (+) (ev fold1 fold2 a) (ev fold1 fold2 b)
   where
     ev :: MWord64 -> MWord64 -> ExpC -> MWord64
-    ev fold1 fold2 x = case cached x of {
-        MWord64 1 vx -> cached x
+    ev !fold1 !fold2 x = {-# SCC "ev" #-} case cached x of {
+        c | not (isNothing64 c) -> c
         -- if x's value was unknown but fold args are now in scope, re-evaluate
         -- the tree
-      ; _ -> case (fold1, fold2) of {
-          (MWord64 1 _, MWord64 1 _) -> evalOnSeed fold1 fold2 (expr x)
-        ; _ -> nothing64
-        }
+          | otherwise -> case (fold1, fold2) of {
+              (a, b) | isNothing64 a || isNothing64 b -> nothing64
+                     | otherwise -> {-# SCC "reevaluate" #-} evalOnSeed fold1 fold2 (expr x)
+            }
       }
 
 cache e = ExpC (evalOnSeed nothing64 nothing64 e) e
