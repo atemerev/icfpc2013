@@ -34,7 +34,7 @@ isSimple :: Exp -> Bool
 
 isSimple Zero = True
 isSimple One = True
-isSimple e | isConstExpr e && (\v -> v == 0 || v == 1) (eval 0 0 0 (ExpC Nothing e)) = False
+isSimple e | isConstExpr e && (\v -> v == 0 || v == 1) (eval 0 0 0 (ExpC nothing64 e)) = False
 isSimple e = isSimpleHead e && isSimpleParts e
 
 isSimpleHead Zero = True
