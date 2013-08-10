@@ -43,9 +43,17 @@ isSimpleHead MainArg = True
 isSimpleHead Fold1Arg = True
 isSimpleHead Fold2Arg = True
 
-isSimpleHead (If a (ExpC _ Zero) (ExpC _ Zero)) = False
-isSimpleHead (If a (ExpC _ One) (ExpC _ One)) = False
+isSimpleHead (If (ExpC _ MainArg) (ExpC _ MainArg) c) = False -- equal to (if0 MainArg 0 c)
+isSimpleHead (If (ExpC _ Fold1Arg) (ExpC _ Fold1Arg) c) = False -- equal to (if0 Fold1Arg 0 c)
+isSimpleHead (If (ExpC _ Fold2Arg) (ExpC _ Fold2Arg) c) = False -- equal to (if0 Fold2Arg 0 c)
+isSimpleHead (If (ExpC _ MainArg) (ExpC _ Zero) (ExpC _ MainArg)) = False -- equal to 0
+isSimpleHead (If (ExpC _ Fold1Arg) (ExpC _ Zero) (ExpC _ Fold1Arg)) = False -- equal to 0
+isSimpleHead (If (ExpC _ Fold2Arg) (ExpC _ Zero) (ExpC _ Fold2Arg)) = False -- equal to 0
+isSimpleHead (If (ExpC _ MainArg) b (ExpC _ MainArg)) = False -- equal to (if0 MainArg b 0)
+isSimpleHead (If (ExpC _ Fold1Arg) b (ExpC _ Fold1Arg)) = False -- equal to (if0 Fold1Arg b 0)
+isSimpleHead (If (ExpC _ Fold2Arg) b (ExpC _ Fold2Arg)) = False -- equal to (if0 Fold2Arg b 0)
 isSimpleHead (If (ExpC _ (Not a)) b c) = False
+isSimpleHead (If a b c) | b == c = False -- equal to b
 isSimpleHead (If a b c) = True
 
 isSimpleHead (Fold a b c) = True
@@ -263,7 +271,7 @@ serFold n restriction = do
   (c, foldC) <- serExp' sizeBody restriction InFoldBody
   guard (usesFold2Arg c)
   -- TODO: is this really true that for tfold we could have ridiculous bodies that do not use foldAcc?
-  (a, foldA) <- serExp' sizeArg restriction $ traceShow ("allowing", ppProg c) ExternalFold
+  (a, foldA) <- serExp' sizeArg restriction ExternalFold
   (b, foldB) <- serExp' sizeSeed restriction ExternalFold
   if isSimpleHead (Fold a b c)
     then return (fold_ a b c, True)
