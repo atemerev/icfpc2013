@@ -280,6 +280,7 @@ serBinop n restriction fs op = do
     then mzero
     else do
       (a, foldA) <- serExp' sizeA restriction fs
+      guard $ expr a /= Zero -- all binary ops (and, or, xor, plus) are stupid if first arg is zero
       (b, foldB) <- serExp' sizeB restriction (if foldA then ExternalFold else fs)
       if isSimpleHead (expr (op a b))
         then return (op a b, foldA || foldB)
