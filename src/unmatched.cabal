@@ -27,6 +27,7 @@ executable fake-server
 
 library
   build-depends:    aeson             >= 0.6
+                  , array
                   , base
                   , HTTP
                   , smallcheck
@@ -50,6 +51,7 @@ library
                   , StringClient
                   , URLs
                   , Solve
+                  , ProgramCounting
 
 executable client
   hs-source-dirs:  ./client
