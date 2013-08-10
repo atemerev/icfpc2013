@@ -29,21 +29,22 @@ import RandomBV
 seed = head bvs
 
 -- Packed "Maybe Word64"
-data MWord64 = MWord64 {-# UNPACK #-} !Int {-# UNPACK #-} !Word64
+newtype MWord64 = MWord64 Word64
   deriving (Show, Data, Typeable)
 
+specialNothingValue = 0x1223071404BCBC05
+
 just64 :: Word64 -> MWord64
-just64 !x = MWord64 1 x
+just64 !x = MWord64 x
 
 nothing64 :: MWord64
-nothing64 = MWord64 0 0
+nothing64 = MWord64 specialNothingValue
 
 isNothing64 :: MWord64 -> Bool
-isNothing64 (MWord64 0 x) = True
-isNothing64 _ = False
+isNothing64 (MWord64 x) = x == specialNothingValue
 
 unsafeValue64 :: MWord64 -> Word64
-unsafeValue64 (MWord64 _ x) = x
+unsafeValue64 (MWord64 x) = x
 
 fromMWord64 :: Word64 -> MWord64 -> Word64
 fromMWord64 def x = if isNothing64 x then def else unsafeValue64 x
