@@ -1,3 +1,4 @@
+{-# LANGUAGE ImplicitParams #-}
 module ProgramCounting (
   inFoldExprCount,
   topLevelNoFoldCount,
@@ -26,13 +27,14 @@ tfoldCount = tfC
 uf, afs, af, tf :: Int -> Integer
 ufC, afsC, afC, tfC :: Array Int Integer
 
-afsC = array (1,size) [(i, afs i) | i <- [1..size]]
-ufC = array (1,size) [(i, uf i) | i <- [1..size]]
-tfC = array (1,size) [(i, tf i) | i <- [1..size]]
-afC = array (1,size) [(i, af i) | i <- [1..size]]
+ufC = listArray (1,size) [ uf i | i <- [1..size]]
+afsC = listArray (1,size) [ afs i | i <- [1..size]]
+tfC = listArray (1,size) [ tf i | i <- [1..size]]
+afC = listArray (1,size) [ af i | i <- [1..size]]
 
 type D = Int -- depth
-data Tag = AF D | AFS D | UF D| TF D | C0 | C1 | X | Y | Z
+data Tag = UF D | AFS D | AF D | TF D
+         | C0 | C1 | X | Y | Z
          | Not Tag | Shl1 Tag | Shr1 Tag | Shr4 Tag | Shr16 Tag
          | And Tag Tag | Or Tag Tag | Xor Tag Tag | Plus Tag Tag
          | If0 Tag Tag Tag | Fold Tag Tag Tag
@@ -41,39 +43,87 @@ data Tag = AF D | AFS D | UF D| TF D | C0 | C1 | X | Y | Z
 isLeaf :: Tag -> Bool
 isLeaf tag = tag `elem` [C0,C1,X,Y,Z]
 
+data Context = Ctx { allowedOp1 :: [AllowedOp1]
+                   , allowedOp2 :: [AllowedOp2]
+                   , isIfAllowed :: !Bool
+                   , isFoldAllowed :: !Bool
+                   , inFoldExprCounts :: Array Int Integer
+                   , topLevelNoFoldCounts :: Array Int Integer
+                   , topLevelCounts :: Array Int Integer
+                   , tfoldCounts :: Array Int Integer
+                   , inFoldExprExpands :: Array Int [Tag]
+                   }
+  
 type AllowedOp1 = Tag -> Tag
 type AllowedOp2 = Tag -> Tag -> Tag
 
 defaultAllowedOp1 = [Not, Shl1, Shr1, Shr4, Shr16]
 defaultAllowedOp2 = [And, Or, Xor, Plus]
 
-expand :: Tag -> [AllowedOp1] -> [AllowedOp2] -> Bool -> Bool -> [Tag]
-expand (AF 1) _ _ _ _ = [C0, C1, X]
-expand (AF n) allowedOp1 allowedOp2 isIfAllowed False = expand (AFS n) allowedOp1 allowedOp2 isIfAllowed False
-expand (AF n) allowedOp1 allowedOp2 isIfAllowed True = concat
-  [ [ op1 (AFS $ n-1) | op1 <- allowedOp1 ]
-  , [ op2 (AF i) (AFS $ n-1-i) | op2 <- allowedOp2, i <- [1..n-2] ]
-  , [ op2 (AFS i) (AF $ n-1-i) | op2 <- allowedOp2, i <- [1..n-2] ]
-  , [ If0 (af1 i) (af2 j) (af3 $ n-1-i-j) | isIfAllowed,
+defaultContext = let ?ctx = defaultContext in
+  Ctx { allowedOp1 = defaultAllowedOp1
+      , allowedOp2 = defaultAllowedOp2
+      , isIfAllowed = True
+      , isFoldAllowed = True
+      , inFoldExprCounts = listArray (1,size) [ uf' i | i <- [1..size]]
+      , topLevelNoFoldCounts = undefined
+      , topLevelCounts = undefined
+      , tfoldCounts = undefined
+      , inFoldExprExpands = listArray (1,size) [ expand (UF n) | n <- [1..size] ]
+      }
+                  
+expand :: (?ctx :: Context) => Tag -> [Tag]
+expand (UF 1) = [C0, C1, X, Y, Z]
+expand (UF n) = concat
+  [ [ op1 (UF $ n-1) | op1 <- allowedOp1 ?ctx ]
+  , [ op2 (UF i) (UF $ n-1-i) | op2 <- allowedOp2 ?ctx, i <- [1..n-2] ]
+  , [ If0 (UF i) (UF j) (UF $ n-1-i-j) | isIfAllowed ?ctx, i <- [1..n-3], j <- [1..n-2-i] ]
+  ]
+
+expand (AFS 1) = [C0, C1, X]
+expand (AFS n) = concat
+  [ [ op1 (AFS $ n-1) | op1 <- allowedOp1 ?ctx ]
+  , [ op2 (AFS i) (AFS $ n-1-i) | op2 <- allowedOp2 ?ctx, i <- [1..n-2] ]
+  , [ If0 (AFS i) (AFS j) (AFS $ n-1-i-j) | isIfAllowed ?ctx, i <- [1..n-3], j <- [1..n-2-i] ]
+  ]
+
+expand (AF 1) = [C0, C1, X]
+expand (AF n) | not (isFoldAllowed ?ctx) = expand (AFS n)
+              | otherwise = concat
+  [ [ op1 (AFS $ n-1) | op1 <- allowedOp1 ?ctx ]
+  , [ op2 (AF i) (AFS $ n-1-i) | op2 <- allowedOp2 ?ctx, i <- [1..n-2] ]
+  , [ op2 (AFS i) (AF $ n-1-i) | op2 <- allowedOp2 ?ctx, i <- [1..n-2] ]
+  , [ If0 (af1 i) (af2 j) (af3 $ n-1-i-j) | isIfAllowed ?ctx,
                                            (af1,af2,af3) <- [(AF,AFS,AFS), (AFS,AF,AFS), (AFS,AFS,AF)],
                                            i <- [1..n-3], j <- [1..n-2-i] ]
   , [ Fold (AFS i) (AFS j) (UF $ n-2-i-j) | i <- [1..n-4], j <- [1..n-3-i] ]
   ]
 
-expand (AFS 1) _ _ _ _ = [C0, C1, X]
-expand (AFS n) allowedOp1 allowedOp2 isIfAllowed _ = concat
-  [ [ op1 (AFS $ n-1) | op1 <- allowedOp1 ]
-  , [ op2 (AFS i) (AFS $ n-1-i) | op2 <- allowedOp2, i <- [1..n-2] ]
-  , [ If0 (AFS i) (AFS j) (AFS $ n-1-i-j) | isIfAllowed, i <- [1..n-3], j <- [1..n-2-i] ]
-  ]
+sizeTag :: (?ctx :: Context) => Tag -> Integer
+sizeTag C0 = 1
+sizeTag C1 = 1
+sizeTag X = 1
+sizeTag Y = 1
+sizeTag Z = 1
+sizeTag (Not tag) = sizeTag tag
+sizeTag (Shl1 tag) = sizeTag tag
+sizeTag (Shr1 tag) = sizeTag tag
+sizeTag (Shr4 tag) = sizeTag tag
+sizeTag (Shr16 tag) = sizeTag tag
+sizeTag (And tag1 tag2) = sizeTag tag1 * sizeTag tag2
+sizeTag (Or tag1 tag2) = sizeTag tag1 * sizeTag tag2
+sizeTag (Xor tag1 tag2) = sizeTag tag1 * sizeTag tag2
+sizeTag (Plus tag1 tag2) = sizeTag tag1 * sizeTag tag2
+sizeTag (If0 tag1 tag2 tag3) = sizeTag tag1 * sizeTag tag2 * sizeTag tag3
+sizeTag (Fold tag1 tag2 tag3) = sizeTag tag1 * sizeTag tag2 * sizeTag tag3
+sizeTag (UF n) = (inFoldExprCounts ?ctx) ! n
 
-expand (UF 1) _ _ _ _ = [C0, C1, X, Y, Z]
-expand (UF n) allowedOp1 allowedOp2 isIfAllowed _ = concat
-  [ [ op1 (UF $ n-1) | op1 <- allowedOp1 ]
-  , [ op2 (UF i) (UF $ n-1-i) | op2 <- allowedOp2, i <- [1..n-2] ]
-  , [ If0 (UF i) (UF j) (UF $ n-1-i-j) | isIfAllowed, i <- [1..n-3], j <- [1..n-2-i] ]
-  ]
-
+uf' :: (?ctx :: Context) => Int -> Integer
+uf' 1 = fromIntegral $ length $ (inFoldExprExpands ?ctx) ! 1
+uf' n = sum $ map sizeTag (ufE ! n)
+  where
+    ufC = inFoldExprCounts ?ctx
+    ufE = inFoldExprExpands ?ctx
 
 -- expression under fold, can use everything except fold
 uf 1 = 5                                                                                              -- 0 1 x y z
@@ -82,6 +132,12 @@ uf n = 5 * ufC ! (n-1) +                                                        
        sum [ ufC ! i * ufC ! j * ufC ! k | i <- [1..n-3], j <- [1..n-2-i], let k = n-1-i-j ]          -- if0 uf uf uf
 
 -- expression that can't contain fold, can't contain fold variables
+{-
+afs 1 = 3                                                                                             -- 0 1 x
+afs n = 5 * afsC ! (n-1) +                                                                            -- op1 afs
+        4 * sum [ afsC ! i * afsC ! j | i <- [1..n-2], let j = n-1-i ] +                              -- op2 afs afs
+        sum [ afsC ! i * afsC ! j * afsC ! k | i <- [1..n-3], j <- [1..n-2-i], let k = n-1-i-j ]      -- if0 afs afs afs
+-}
 afs 1 = 3                                                                                             -- 0 1 x
 afs n = 5 * afsC ! (n-1) +                                                                            -- op1 afs
         4 * sum [ afsC ! i * afsC ! j | i <- [1..n-2], let j = n-1-i ] +                              -- op2 afs afs
