@@ -198,7 +198,7 @@ data FoldState = NoFold -- Allowed to generate unrestricted expression except re
                | InFoldBody -- Allowed to generate references to fold args but not folds
                deriving (Eq, Show, Ord)
 
-elements :: (Monad m) => [a] -> Series m a
+elements :: (MonadPlus m) => [a] -> m a
 elements = msum . map return
 
 type Cache = M.Map (Int, FoldState) [(Exp, Bool)]
@@ -206,7 +206,7 @@ cacheMin = 3
 cacheMax = 7
 
 -- Generates (expression, does it contain a fold?)
-serExp' :: (Monad m, ?tfold :: Bool, ?cache :: Cache) => Int -> Restriction -> FoldState -> Series m (Exp, Bool)
+serExp' :: (MonadPlus m, ?tfold :: Bool, ?cache :: Cache) => Int -> Restriction -> FoldState -> m (Exp, Bool)
 serExp' n _ _ | n < 1 = mzero
 -- if tfold is set, the only occurrence of MainArg is at the toplevel
 serExp' 1 _ InFoldBody = if ?tfold
@@ -225,7 +225,7 @@ serExp' n restriction fs = msum $ concat [
   map (\op -> serUnop n restriction fs op) (allowedUnaryOps restriction),
   map (\op -> serBinop n restriction fs op) (allowedBinaryOps restriction)]
 
-serIf :: (Monad m, ?tfold :: Bool, ?cache :: Cache) => Int -> Restriction -> FoldState -> Series m (Exp, Bool)
+serIf :: (MonadPlus m, ?tfold :: Bool, ?cache :: Cache) => Int -> Restriction -> FoldState -> m (Exp, Bool)
 serIf n restriction fs = do
   sizeA <- elements [1..n - 3]
   sizeB <- elements [1..n - 2 - sizeA]
@@ -240,7 +240,7 @@ serIf n restriction fs = do
         then return (If a b c, foldA || foldB || foldC)
         else mzero
 
-serFold :: (Monad m, ?tfold :: Bool, ?cache :: Cache) => Int -> Restriction -> Series m (Exp, Bool)
+serFold :: (MonadPlus m, ?tfold :: Bool, ?cache :: Cache) => Int -> Restriction -> m (Exp, Bool)
 serFold n restriction = do
   sizeArg <- elements [1..n - 4]
   sizeSeed <- elements [1..n - 3 - sizeArg]
@@ -252,14 +252,14 @@ serFold n restriction = do
     then return (Fold a b c, True)
     else mzero
 
-serUnop :: (Monad m, ?tfold :: Bool, ?cache :: Cache) => Int -> Restriction -> FoldState -> (Exp -> Exp) -> Series m (Exp, Bool)
+serUnop :: (MonadPlus m, ?tfold :: Bool, ?cache :: Cache) => Int -> Restriction -> FoldState -> (Exp -> Exp) -> m (Exp, Bool)
 serUnop n restriction fs op = do
   (a, foldA) <- serExp' (n-1) restriction fs
   if isSimpleHead (op a)
     then return (op a, foldA)
     else mzero
 
-serBinop :: (Monad m, ?tfold :: Bool, ?cache :: Cache) => Int -> Restriction -> FoldState -> (Exp -> Exp -> Exp) -> Series m (Exp, Bool)
+serBinop :: (MonadPlus m, ?tfold :: Bool, ?cache :: Cache) => Int -> Restriction -> FoldState -> (Exp -> Exp -> Exp) -> m (Exp, Bool)
 serBinop n restriction fs op = do
   sizeA <- elements [1..n - 2]
   let sizeB = n - 1 - sizeA
