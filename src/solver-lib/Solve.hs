@@ -4,20 +4,20 @@ import RandomBV (bvs)
 import Types
 import ServerAPI
 import HsClient (evalProgramById, guessProgram)
-import Gen (generateRestricted)
-import Filter (filterProgs)
+import Gen (generateRestrictedUpTo)
+import Filter (filterProgs, filterByCached)
 import PP (ppProg)
 import Control.Exception (evaluate)
 import System.Timeout
 
 solve :: String -> Int -> [String] -> IO ()
-solve progId size operations = solve' progId (generateRestricted size operations)
+solve progId size operations = solve' progId (generateRestrictedUpTo size operations)
 
-solve' :: String -> [Exp] -> IO ()
+solve' :: String -> [ExpC] -> IO ()
 solve' progId allProgs = do
   evalRes <- evalProgramById progId bvs
   case evalRes of
-    EvalOK outputs -> loop progId bvs outputs allProgs
+    EvalOK outputs -> loop progId bvs outputs (filterByCached (head outputs) allProgs)
     EvalError msg -> error $ "evalProgramById returned error:" ++ show msg
 
   where 
@@ -42,7 +42,7 @@ isFeasible tmout p
   | problemSize p >= 16 = return Nothing
   | otherwise =
     timeout (tmout * 10^6) $ do
-      let gen = generateRestricted (problemSize p) (operators p)
+      let gen = generateRestrictedUpTo (problemSize p) (operators p)
       let lgen = length gen
       evaluate lgen
       return ()

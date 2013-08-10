@@ -9,24 +9,26 @@ license:            AllRightsReserved
 -- copyright:
 category:           Web
 build-type:         Simple
-cabal-version:      >=1.8
+cabal-version:      >=1.10
 
-executable fake-server
-  main-is: fake-server/FakeServer.hs           
-  -- other-modules:       
-  build-depends:    aeson             >= 0.6
-                  , base
-                  , bytestring        >= 0.10
-                  , blaze-builder     >= 0.3
-                  , http-types        >= 0.8
-                  , wai               >= 1.4
-                  , warp              >= 1.3
-                  , unmatched
-
-  extensions:       OverloadedStrings
+-- executable fake-server
+--   Default-language:    Haskell2010
+--   main-is: fake-server/FakeServer.hs           
+--   -- other-modules:       
+--   build-depends:    aeson             >= 0.6
+--                   , base
+--                   , bytestring        >= 0.10
+--                   , blaze-builder     >= 0.3
+--                   , http-types        >= 0.8
+--                   , wai               >= 1.4
+--                   , warp              >= 1.3
+--                   , unmatched
+--   default-extensions: OverloadedStrings
 
 library
+  Default-language:    Haskell2010
   build-depends:    aeson             >= 0.6
+                  , array
                   , base
                   , HTTP
                   , smallcheck
@@ -50,8 +52,10 @@ library
                   , StringClient
                   , URLs
                   , Solve
+                  , ProgramCounting
 
 executable client
+  Default-language:    Haskell2010
   hs-source-dirs:  ./client
   main-is: client.hs
   build-depends:    base
@@ -64,6 +68,7 @@ executable client
                   , containers
 
 executable benchmark
+  Default-language:    Haskell2010
   hs-source-dirs:  ./test
   main-is: benchmark.hs
   build-depends:    base
@@ -71,6 +76,7 @@ executable benchmark
                   , smallcheck
 
 test-suite test
+  Default-language:    Haskell2010
   type: exitcode-stdio-1.0
   hs-source-dirs: test
   main-is: run.hs

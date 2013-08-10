@@ -12,6 +12,9 @@ import Data.Ord (comparing)
 import Text.Printf
 import System.IO
 import Solve (solve, isFeasible, solve')
+import PP (ppProg)
+import Data.Word
+import Filter
 
 data Cmd = MyProblems
          | Status
@@ -25,6 +28,9 @@ data Cmd = MyProblems
          | Solve String String
          | Filter String String
          | SolveMany Int Int Int
+         | LowLevelSolve String Int [String]
+         | FilterCached Int [String] Word64
+           
            
 main = do
   hSetBuffering stdout NoBuffering
@@ -43,7 +49,7 @@ run (Eval programOrId args) =
 
 run (Guess id program) = putStrLn =<< guessProgram id program
 
-run (Generate size ops) = mapM_ print $ generateRestricted size ops
+run (Generate size ops) = mapM_ (putStrLn . ppProg) $ generateRestrictedUpTo size ops
 
 run (Unsolved fname) = putStrLn =<< FC.getUnsolved fname
 
@@ -72,6 +78,8 @@ run (Solve fname id) = do
     Nothing -> error "No unsolved problems with this ID"
     Just p -> solve (problemId p) (problemSize p) (operators p)
 
+run (LowLevelSolve id size ops) = solve id size ops
+
 run (Filter problemsFile idsFile) = FC.filterByIds problemsFile idsFile >>= putStrLn
   
 run (SolveMany offset limit tmout) = do
@@ -87,6 +95,9 @@ run (SolveMany offset limit tmout) = do
         Nothing -> putStrLn ("  skipping " ++ problemId p ++ " - timed out")
         Just () -> solve' (problemId p) (generateRestricted (problemSize p) (operators p))
       trySolve ps
+
+run (FilterCached size ops expected) = mapM_ (putStrLn.ppProg) $ filterByCached expected $ generateRestrictedUpTo size ops
+
 
 options = info (clientOptions <**> helper) idm
 
@@ -119,6 +130,9 @@ clientOptions =
   <> command "train-solve"
     (info trainSolve
      (progDesc "Solve the new training task of the given size"))
+  <> command "low-level-solve"
+    (info lowLevelSolve
+     (progDesc "Try solving problem supplying its ID, SIZE, OPERATIONS manually"))
   <> command "production-solve-one"
     (info realSolve
      (progDesc "Solve the REAL tasks with given ID (deprecated)"))
@@ -128,6 +142,9 @@ clientOptions =
   <> command "filter-out"
     (info filterProblems
      (progDesc "Filter out tasks with given IDs (deprecated)"))
+  <> command "filter-cached"
+    (info filterCached
+     (progDesc "Filter generated expressions by the value they should have on the first test input"))
   )
 
 train = Train <$> (fmap read <$> ( optional $ strOption (metavar "LENGTH" <> short 'l' <> long "length")))
@@ -148,6 +165,14 @@ findSolvable = FindSolvable <$> argument str (metavar "FILE")
                             <*> (read <$> argument str (metavar "TIMEOUT"))
 
 trainSolve = TrainSolve <$> (read <$> argument str (metavar "SIZE"))
+
+lowLevelSolve = LowLevelSolve <$> argument str (metavar "ID")
+                              <*> (read <$> argument str (metavar "SIZE"))
+                              <*> (words <$> (argument str (metavar "OPERATIONS")))
+
+filterCached = FilterCached <$> (read <$> argument str (metavar "SIZE"))
+                            <*> (words <$> (argument str (metavar "OPERATIONS")))
+                            <*> (read <$> argument str (metavar "EXPECTED-VALUE"))
 
 realSolve = Solve <$> argument str (metavar "FILE")
                   <*> argument str (metavar "ID")
