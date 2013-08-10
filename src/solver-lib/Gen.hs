@@ -150,12 +150,12 @@ generateRestricted' tfold n restriction =
     foldBodies = do
       n <- getDepth
       let filledCache = let ?cache = M.empty
-                        in M.fromList [((i, InFoldBody), [(e,f) | (e,f) <- list i (serExp' i restriction InFoldBody), isSimpleC e, usesFold2Arg e])
+                        in M.fromList [((i, InFoldBody), [(e,f) | (e,f) <- list i (serExp' i restriction InFoldBody), isSimpleC e, usesFold2Arg e, usesFold1Arg e])
                                       | i <- [cacheMin .. min n cacheMax]
                                       ]
       let ?cache = filledCache
       (e, hasFold) <- serExp' n (restriction .&. complement (1 `shiftL` 10)) InFoldBody -- Fold should not be there, but remove it just in case
-      guard $ usesFold2Arg e
+      guard $ usesFold2Arg e && usesFold1Arg e -- since initial value for acc in tfold is known, bodies that use just acc are not interesting
       return e
 
 -- Generators are restricted to allowed function set
@@ -293,6 +293,26 @@ usesFold2Arg (ExpC _ e) = u e
     u (Or a b) = usesFold2Arg a || usesFold2Arg b
     u (Xor a b) = usesFold2Arg a || usesFold2Arg b
     u (Plus a b) = usesFold2Arg a || usesFold2Arg b
+
+usesFold1Arg :: ExpC -> Bool
+usesFold1Arg (ExpC _ e) = u e
+  where
+    u Zero = False
+    u One = False
+    u MainArg = False
+    u Fold1Arg = True
+    u Fold2Arg = False
+    u (If a b c) = {- usesFold1Arg a || -} usesFold1Arg b || usesFold1Arg c -- if0 branches should refer to fold2Arg, otherwise they are as good as constant
+    u (Fold a b c) = usesFold1Arg a || usesFold1Arg b || usesFold1Arg c -- should not happen, but still
+    u (Not a) = usesFold1Arg a
+    u (Shl1 a) = usesFold1Arg a
+    u (Shr1 a) = usesFold1Arg a
+    u (Shr4 a) = usesFold1Arg a
+    u (Shr16 a) = usesFold1Arg a
+    u (And a b) = usesFold1Arg a || usesFold1Arg b
+    u (Or a b) = usesFold1Arg a || usesFold1Arg b
+    u (Xor a b) = usesFold1Arg a || usesFold1Arg b
+    u (Plus a b) = usesFold1Arg a || usesFold1Arg b
 
     
     
