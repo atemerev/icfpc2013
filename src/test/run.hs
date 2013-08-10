@@ -19,7 +19,7 @@ main = defaultMain allTests
 allTests = testGroup "Tests"
   [ generatorTests, evalTests ]
 
-generatorTests = localOption (SmallCheckDepth 10) $ testGroup "Generation"
+generatorTests = localOption (SmallCheckDepth 8) $ testGroup "Generation"
   [ testProperty "Programs have correct size" $
       \n -> changeDepth (const n) $
         over (serProg noRestriction) $ \prog -> progSize (expr prog) == n
