@@ -66,13 +66,13 @@ executable client
                   , smallcheck
                   , containers
 
-executable benchmark
-  Default-language:    Haskell2010
-  hs-source-dirs:  ./test
-  main-is: benchmark.hs
-  build-depends:    base
-                  , unmatched
-                  , smallcheck
+-- executable benchmark
+--   Default-language:    Haskell2010
+--   hs-source-dirs:  ./test
+--   main-is: benchmark.hs
+--   build-depends:    base
+--                   , unmatched
+--                   , smallcheck
 
 test-suite test
   Default-language:    Haskell2010
