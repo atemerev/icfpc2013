@@ -240,12 +240,12 @@ serExp' n restriction fs = msum $ concat [
 serIf :: (MonadPlus m, ?tfold :: Bool, ?cache :: Cache) => Int -> Restriction -> FoldState -> m (ExpC, Bool)
 serIf n restriction fs = do
   sizeA <- elements [1..n - 3]
-  sizeB <- elements [1..n - 2 - sizeA]
-  let sizeC = n - 1 - sizeA - sizeB
   (a, foldA) <- serExp' sizeA restriction fs
   if isConstExprC a
     then mzero
     else do
+      sizeB <- elements [1..n - 2 - sizeA]
+      let sizeC = n - 1 - sizeA - sizeB
       (b, foldB) <- serExp' sizeB restriction (if foldA then ExternalFold else fs)
       (c, foldC) <- serExp' sizeC restriction (if (foldA || foldB) then ExternalFold else fs)
       if isSimpleHead (If a b c)
