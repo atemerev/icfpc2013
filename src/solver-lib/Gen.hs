@@ -40,6 +40,8 @@ isSimpleHead MainArg = True
 isSimpleHead Fold1Arg = True
 isSimpleHead Fold2Arg = True
 
+isSimpleHead (If a Zero Zero) = False
+isSimpleHead (If a One One) = False
 isSimpleHead (If (Not a) b c) = False
 isSimpleHead (If a b c) = True
 
@@ -48,13 +50,20 @@ isSimpleHead (Fold a b c) = True
 isSimpleHead (Not (Not a)) = False
 isSimpleHead (Not a) = True
 
+isSimpleHead (Shl1 Zero) = False
 isSimpleHead (Shl1 a) = True
 
+isSimpleHead (Shr1 Zero) = False
+isSimpleHead (Shr1 One)  = False
 isSimpleHead (Shr1 a) = True
 
+isSimpleHead (Shr4 Zero) = False
+isSimpleHead (Shr4 One)  = False
 isSimpleHead (Shr4 (Shr1 a)) = False
 isSimpleHead (Shr4 a) = True
 
+isSimpleHead (Shr16 Zero) = False
+isSimpleHead (Shr16 One)  = False
 isSimpleHead (Shr16 (Shr1 a)) = False
 isSimpleHead (Shr16 (Shr4 a)) = False
 isSimpleHead (Shr16 a) = True
