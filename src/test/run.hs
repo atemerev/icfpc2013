@@ -12,6 +12,7 @@ import Control.Monad
 import Types
 import Gen
 import RandomBV (bvs)
+import Data.Maybe
 
 main = defaultMain allTests
 
@@ -34,7 +35,8 @@ generatorTests = localOption (SmallCheckDepth 12) $ testGroup "Generation"
         == S.fromList (list n (serProg (restrictionFromList ops)))
   , testProperty "Programs have correct cached value for seed" $
       \n -> changeDepth (const n) $
-        over (serProg noRestriction) $ \prog -> cached prog == eval (head bvs) undefined undefined prog
+        over (serProg noRestriction) $ \prog -> 
+        fromMaybe (error "no cached value in test") (cached prog) == eval (head bvs) undefined undefined prog
   ]
 
 evalTests = testGroup "Evaluation" $

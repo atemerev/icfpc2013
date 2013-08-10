@@ -9,7 +9,7 @@ module Types
   , progSize
   , expSize
   , expCSize
-  , -- zero, one, mainArg, fold1Arg, fold2Arg, if0, fold_, not_, shl1, shr1, shr4, shr16, and_ , or_ , xor_, plus
+  , zero, one, mainArg, fold1Arg, fold2Arg, if0, fold_, not_, shl1, shr1, shr4, shr16, and_ , or_ , xor_, plus
   )
   where
 
@@ -151,22 +151,25 @@ evalOnSeed e =
           Nothing
       )
 
-{-zero = ExpC 0 Zero
-one  = ExpC 1 One
-mainArg = ExpC seed MainArg
-fold1Arg = undefined -- TODO
-fold2Arg = undefined -- TODO
-if0 a b c = ExpC (if (cached a) == 0 then cached b else cached c) (If a b c)
-fold_ a b c =  ExpC (foldImpl seed (cached a) (cached b) c) (Fold a b c)
-not_ a   = ExpC (complement (cached a)) (Not a)
-shl1 a  = ExpC (shiftL (cached a) 1) (Shl1 a)
-shr1 a  = ExpC (shiftR (cached a) 1) (Shr1 a)
-shr4 a  = ExpC (shiftR (cached a) 4) (Shr4 a)
-shr16 a = ExpC (shiftR (cached a) 16) (Shr16 a)
-and_ a b = ExpC ((cached a) .&. (cached b)) (And a b)
-or_ a b = ExpC ((cached a) .|. (cached b)) (Or a b)
-xor_ a b = ExpC ((cached a) `xor` (cached b)) (Xor a b)
-plus a b = ExpC ((cached a) + (cached b)) (Plus a b)-}
+cache e = 
+  let ?foldArgs = Nothing in 
+  ExpC (evalOnSeed e) e
+zero = ExpC (Just 0) Zero
+one  = ExpC (Just 1) One
+mainArg = ExpC (Just seed) MainArg
+fold1Arg = ExpC Nothing Fold1Arg
+fold2Arg = ExpC Nothing Fold2Arg
+if0 a b c = cache (If a b c)
+fold_ a b c = cache (Fold a b c)
+not_ a   = cache (Not a)
+shl1 a  = cache (Shl1 a)
+shr1 a  = cache (Shr1 a)
+shr4 a  = cache (Shr4 a)
+shr16 a = cache (Shr16 a)
+and_ a b = cache (And a b)
+or_ a b = cache (Or a b)
+xor_ a b = cache (Xor a b)
+plus a b = cache (Plus a b)
 
 progSize :: Exp -> Int
 progSize e = expSize e + 1
