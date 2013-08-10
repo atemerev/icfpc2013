@@ -1,14 +1,21 @@
 module Filter where
 
 import Types
+import Data.Maybe
 
 filterProgs
   :: [Word64] -- inputs
   -> [Word64] -- outputs
-  -> [Exp] -- all programs
-  -> [Exp] -- programs that match
-filterProgs ins outs =
-  filter $ \prog -> and $
-    zipWith
-      (\inp outp -> eval inp undefined undefined prog == outp)
-      ins outs
+  -> [ExpC] -- all programs
+  -> [ExpC] -- programs that match
+filterProgs ins outs progs =
+  filter allInputsMatchAllOutputs progs
+  where 
+    allInputsMatchAllOutputs prog = 
+      and $ zipWith
+        (\inp outp -> eval inp undefined undefined prog == outp)
+        ins outs
+
+-- Filter generated list of expressions by checking if cached valued on known seed argument matches expectation
+filterByCached :: Word64 -> [ExpC] -> [ExpC]
+filterByCached expected progs = filter ((==expected).(fromMaybe (error "no cached value in filterByCached")).cached) progs
