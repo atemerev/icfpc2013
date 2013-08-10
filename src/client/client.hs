@@ -26,6 +26,7 @@ data Cmd = MyProblems
          | Solve String String
          | Filter String String
          | SolveMany Int Int Int
+         | LowLevelSolve String Int [String]
            
 main = do
   hSetBuffering stdout NoBuffering
@@ -72,6 +73,8 @@ run (Solve fname id) = do
   case find ((==id).problemId) problems of
     Nothing -> error "No unsolved problems with this ID"
     Just p -> solve (problemId p) (problemSize p) (operators p)
+
+run (LowLevelSolve id size ops) = solve id size ops
 
 run (Filter problemsFile idsFile) = FC.filterByIds problemsFile idsFile >>= putStrLn
   
@@ -120,6 +123,9 @@ clientOptions =
   <> command "train-solve"
     (info trainSolve
      (progDesc "Solve the new training task of the given size"))
+  <> command "low-level-solve"
+    (info lowLevelSolve
+     (progDesc "Try solving problem supplying its ID, SIZE, OPERATIONS manually"))
   <> command "production-solve-one"
     (info realSolve
      (progDesc "Solve the REAL tasks with given ID (deprecated)"))
@@ -149,6 +155,10 @@ findSolvable = FindSolvable <$> argument str (metavar "FILE")
                             <*> (read <$> argument str (metavar "TIMEOUT"))
 
 trainSolve = TrainSolve <$> (read <$> argument str (metavar "SIZE"))
+
+lowLevelSolve = LowLevelSolve <$> argument str (metavar "ID")
+                              <*> (read <$> argument str (metavar "SIZE"))
+                              <*> (words <$> (argument str (metavar "OPERATIONS")))
 
 realSolve = Solve <$> argument str (metavar "FILE")
                   <*> argument str (metavar "ID")
