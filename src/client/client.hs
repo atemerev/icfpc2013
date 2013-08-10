@@ -12,6 +12,7 @@ import Data.Ord (comparing)
 import Text.Printf
 import System.IO
 import Solve (solve, isFeasible, solve')
+import PP (ppProg)
 
 data Cmd = MyProblems
          | Status
@@ -43,7 +44,7 @@ run (Eval programOrId args) =
 
 run (Guess id program) = putStrLn =<< guessProgram id program
 
-run (Generate size ops) = mapM_ print $ generateRestricted size ops
+run (Generate size ops) = mapM_ (putStrLn . ppProg) $ generateRestricted size ops
 
 run (Unsolved fname) = putStrLn =<< FC.getUnsolved fname
 
