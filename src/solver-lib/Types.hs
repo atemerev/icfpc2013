@@ -1,8 +1,11 @@
-{-# LANGUAGE GADTs, DeriveDataTypeable, BangPatterns, ImplicitParams #-}
+{-# LANGUAGE GADTs, DeriveDataTypeable, BangPatterns, ImplicitParams, MagicHash #-}
 module Types
   ( Exp(..)
   , ExpC(..)
   , Word64
+  , MWord64
+  , nothing64
+  , fromMWord64
   , eval
   , isConstExpr
   , isConstExprC
@@ -25,7 +28,37 @@ import RandomBV
 -- Expression that caches result of evaluation on the first bitvector that we would test on
 seed = head bvs
 
-data ExpC = ExpC {cached :: !(Maybe Word64), expr :: Exp} deriving (Show, Data, Typeable)
+-- Packed "Maybe Word64"
+newtype MWord64 = MWord64 Word64
+  deriving (Show, Data, Typeable)
+
+specialNothingValue = 0x1223071404BCBC05
+
+just64 :: Word64 -> MWord64
+just64 !x = MWord64 x
+
+nothing64 :: MWord64
+nothing64 = MWord64 specialNothingValue
+
+isNothing64 :: MWord64 -> Bool
+isNothing64 (MWord64 x) = x == specialNothingValue
+
+unsafeValue64 :: MWord64 -> Word64
+unsafeValue64 (MWord64 x) = x
+
+fromMWord64 :: Word64 -> MWord64 -> Word64
+fromMWord64 def x = if isNothing64 x then def else unsafeValue64 x
+
+-- We use this function only when it's cheaper to apply f than to check b :)
+map64 :: (Word64 -> Word64) -> MWord64 -> MWord64
+map64 f x = if isNothing64 x then nothing64 else just64 (f (unsafeValue64 x))
+
+zip64 :: (Word64 -> Word64 -> Word64) -> MWord64 -> MWord64 -> MWord64
+zip64 f x y = if isNothing64 x || isNothing64 y
+              then nothing64
+              else just64 (f (unsafeValue64 x) (unsafeValue64 y))
+
+data ExpC = ExpC {cached :: {-# UNPACK #-} !MWord64, expr :: Exp} deriving (Show, Data, Typeable)
 instance Eq ExpC where
   (ExpC _ a) == (ExpC _ b) = a == b
 instance Ord ExpC where
@@ -114,58 +147,59 @@ foldImpl eval !x !seed body = op x0 (op x1 (op x2 (op x3 (op x4 (op x5 (op x6 (o
     (!x1', !x1) = x2' `divMod` 256
     (!x0', !x0) = x1' `divMod` 256
 
-evalOnSeed :: (?foldArgs :: Maybe (Word64, Word64)) => Exp -> Maybe Word64
-evalOnSeed e =
-  maybe Nothing (Just $!) $
+evalOnSeed :: MWord64 -> MWord64 -> Exp -> MWord64
+evalOnSeed !fold1 !fold2 e = {-# SCC "evalOnSeed" #-}
   case e of
-    Zero -> Just 0
-    One -> Just 1
-    MainArg -> Just seed
-    Fold1Arg -> fst <$> ?foldArgs
-    Fold2Arg -> snd <$> ?foldArgs
+    Zero -> just64 0
+    One -> just64 1
+    MainArg -> just64 seed
+    Fold1Arg -> fold1
+    Fold2Arg -> fold2
     If a b c ->
-      case ev a of
-        Just 0 -> ev b
-        Just _ -> ev c
-        Nothing -> Nothing
+      case ev fold1 fold2 a of {
+        x | isNothing64 x -> nothing64
+          | unsafeValue64 x == 0 -> ev fold1 fold2 b
+          | otherwise            -> ev fold1 fold2 c
+      }
+
     Fold a b c ->
       let
         evalFn :: Word64 -> Word64 -> ExpC -> Word64
-        evalFn f1Arg f2Arg body =
-          let ?foldArgs = Just (f1Arg, f2Arg)
-          in fromMaybe (error "evalOnSeed.Fold") $ ev body
-      in foldImpl evalFn <$> ev a <*> ev b <*> pure c
-    Not a   -> complement <$> ev a
-    Shl1 a  -> shiftL <$> ev a <*> pure 1
-    Shr1 a  -> shiftR <$> ev a <*> pure 1
-    Shr4 a  -> shiftR <$> ev a <*> pure 4
-    Shr16 a -> shiftR <$> ev a <*> pure 16
-    And a b -> (.&.) <$> ev a <*> ev b
-    Or a b ->  (.|.) <$> ev a <*> ev b
-    Xor a b -> xor <$> ev a <*> ev b
-    Plus a b -> (+) <$> ev a <*> ev b
+        evalFn !f1Arg !f2Arg body = case ev (just64 f1Arg) (just64 f2Arg) body of {
+          x | isNothing64 x -> error $ "Failed evaluation within fold: (f1,f2,body) = " ++ show (f1Arg, f2Arg, body)
+            | otherwise -> unsafeValue64 x
+        }
+      in case (ev fold1 fold2 a, ev fold1 fold2 b) of {
+           (x, y) | isNothing64 x || isNothing64 y -> nothing64
+                  | otherwise                      -> just64 $ foldImpl evalFn (unsafeValue64 x) (unsafeValue64 y) c
+         }
+    Not a   -> map64 complement (ev fold1 fold2 a)
+    Shl1 a  -> map64 (\x -> x `shiftL` 1) (ev fold1 fold2 a)
+    Shr1 a  -> map64 (\x -> x `shiftR` 1) (ev fold1 fold2 a)
+    Shr4 a  -> map64 (\x -> x `shiftR` 4) (ev fold1 fold2 a)
+    Shr16 a -> map64 (\x -> x `shiftR` 16) (ev fold1 fold2 a)
+    And a b -> zip64 (.&.) (ev fold1 fold2 a) (ev fold1 fold2 b)
+    Or a b ->  zip64 (.|.) (ev fold1 fold2 a) (ev fold1 fold2 b)
+    Xor a b -> zip64 (xor) (ev fold1 fold2 a) (ev fold1 fold2 b)
+    Plus a b -> zip64 (+) (ev fold1 fold2 a) (ev fold1 fold2 b)
   where
-    ev :: (?foldArgs :: Maybe (Word64, Word64)) => ExpC -> Maybe Word64
-    ev x =
-      mplus (cached x) $ -- if x's value is known, just use it
-      (if isJust ?foldArgs
-        then
-          -- if x's value was unknown but fold args are now in scope, re-evaluate
-          -- the tree
-          evalOnSeed $ expr x
-        else
-          -- otherwise, give up
-          Nothing
-      )
+    ev :: MWord64 -> MWord64 -> ExpC -> MWord64
+    ev !fold1 !fold2 x = {-# SCC "ev" #-} case cached x of {
+        c | not (isNothing64 c) -> c
+        -- if x's value was unknown but fold args are now in scope, re-evaluate
+        -- the tree
+          | otherwise -> case (fold1, fold2) of {
+              (a, b) | isNothing64 a || isNothing64 b -> nothing64
+                     | otherwise -> {-# SCC "reevaluate" #-} evalOnSeed fold1 fold2 (expr x)
+            }
+      }
 
-cache e = 
-  let ?foldArgs = Nothing in 
-  ExpC (evalOnSeed e) e
-zero = ExpC (Just 0) Zero
-one  = ExpC (Just 1) One
-mainArg = ExpC (Just seed) MainArg
-fold1Arg = ExpC Nothing Fold1Arg
-fold2Arg = ExpC Nothing Fold2Arg
+cache e = ExpC (evalOnSeed nothing64 nothing64 e) e
+zero = ExpC (just64 0) Zero
+one  = ExpC (just64 1) One
+mainArg = ExpC (just64 seed) MainArg
+fold1Arg = ExpC nothing64 Fold1Arg
+fold2Arg = ExpC nothing64 Fold2Arg
 if0 a b c = cache (If a b c)
 fold_ a b c = cache (Fold a b c)
 not_ a   = cache (Not a)

@@ -1,4 +1,4 @@
-module Solve (solve, solve', isFeasible) where 
+module Solve (solve, solve', solveExact, isFeasible) where 
 
 import RandomBV (bvs)
 import Types
@@ -14,6 +14,14 @@ import System.Timeout
 solve :: String -> Int -> [String] -> IO ()
 solve progId size operations = solve' progId (generateRestrictedUpTo size operations)
 
+solveExact :: Int -> [String] -> [Word64] -> [Word64] -> IO ()
+solveExact size operations inputs outputs = do
+  let programs = generateRestrictedUpTo size operations
+  let candidates = filterProgs inputs outputs programs
+  if null candidates
+    then putStrLn "Couldn't find any program matching conditions at all!"
+    else print (head candidates)
+
 solve' :: String -> PS ExpC ExpC -> IO ()
 solve' progId allProgs = do
   evalRes <- evalProgramById progId bvs
@@ -23,11 +31,13 @@ solve' progId allProgs = do
 
   where 
     loop pId inputs outputs programs = do
+      putStrLn $ "INOUTS to reproduce with client solve-exact: " ++ show (inputs, outputs)
       let
         candidates = filterProgs inputs outputs programs
       first <-
         maybe (throwIO $ ErrorCall "Nothing has been found") return
         =<< runPS candidates 4 (<= 3)
+
         -- mapM_ (putStrLn . ppProg) candidates
       print first
       gr <- guessProgram pId (ppProg first)

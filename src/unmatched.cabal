@@ -34,6 +34,7 @@ library
                   , smallcheck
                   , text              >= 0.11
                   , vector            >= 0.10
+                  , pretty            >= 1.1.1
                   , bytestring        >= 0.10
                   , pretty
                   , containers

@@ -11,7 +11,7 @@ import Data.List (isInfixOf, intercalate, find, sortBy)
 import Data.Ord (comparing)
 import Text.Printf
 import System.IO
-import Solve (solve, isFeasible, solve')
+import Solve (solve, isFeasible, solve', solveExact)
 import PP (ppProg)
 import Data.Word
 import Filter
@@ -29,8 +29,8 @@ data Cmd = MyProblems
          | Filter String String
          | SolveMany Int Int Int
          | LowLevelSolve String Int [String]
+         | SolveExact Int [String] ([Word64], [Word64])
          | FilterCached Int [String] Word64
-           
            
 main = do
   hSetBuffering stdout NoBuffering
@@ -79,6 +79,8 @@ run (Solve fname id) = do
     Just p -> solve (problemId p) (problemSize p) (operators p)
 
 run (LowLevelSolve id size ops) = solve id size ops
+
+run (SolveExact size ops (ins, outs)) = solveExact size ops ins outs
 
 run (Filter problemsFile idsFile) = FC.filterByIds problemsFile idsFile >>= putStrLn
   
@@ -133,6 +135,9 @@ clientOptions =
   <> command "low-level-solve"
     (info lowLevelSolve
      (progDesc "Try solving problem supplying its ID, SIZE, OPERATIONS manually"))
+  <> command "solve-exact"
+    (info solveExactCmd
+     (progDesc "Try solving problem supplying its SIZE, OPERATIONS, INPUTS/OUTPUTS manually"))
   <> command "production-solve-one"
     (info realSolve
      (progDesc "Solve the REAL tasks with given ID (deprecated)"))
@@ -169,6 +174,10 @@ trainSolve = TrainSolve <$> (read <$> argument str (metavar "SIZE"))
 lowLevelSolve = LowLevelSolve <$> argument str (metavar "ID")
                               <*> (read <$> argument str (metavar "SIZE"))
                               <*> (words <$> (argument str (metavar "OPERATIONS")))
+
+solveExactCmd = SolveExact <$> (read <$> argument str (metavar "SIZE"))
+                           <*> (words <$> (argument str (metavar "OPERATIONS")))
+                           <*> (read <$> (argument str (metavar "INOUTS")))
 
 filterCached = FilterCached <$> (read <$> argument str (metavar "SIZE"))
                             <*> (words <$> (argument str (metavar "OPERATIONS")))

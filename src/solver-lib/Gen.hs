@@ -35,7 +35,7 @@ isSimple :: Exp -> Bool
 
 isSimple Zero = True
 isSimple One = True
-isSimple e | isConstExpr e && (\v -> v == 0 || v == 1) (eval 0 0 0 (ExpC Nothing e)) = False
+isSimple e | isConstExpr e && (\v -> v == 0 || v == 1) (eval 0 0 0 (ExpC nothing64 e)) = False
 isSimple e = isSimpleHead e && isSimpleParts e
 
 isSimpleHead Zero = True
@@ -44,9 +44,14 @@ isSimpleHead MainArg = True
 isSimpleHead Fold1Arg = True
 isSimpleHead Fold2Arg = True
 
-isSimpleHead (If a (ExpC _ Zero) (ExpC _ Zero)) = False
-isSimpleHead (If a (ExpC _ One) (ExpC _ One)) = False
+isSimpleHead (If (ExpC _ MainArg) (ExpC _ MainArg) c) = False -- equal to (if0 MainArg 0 c)
+isSimpleHead (If (ExpC _ Fold1Arg) (ExpC _ Fold1Arg) c) = False -- equal to (if0 Fold1Arg 0 c)
+isSimpleHead (If (ExpC _ Fold2Arg) (ExpC _ Fold2Arg) c) = False -- equal to (if0 Fold2Arg 0 c)
+isSimpleHead (If (ExpC _ MainArg) (ExpC _ Zero) (ExpC _ MainArg)) = False -- equal to 0
+isSimpleHead (If (ExpC _ Fold1Arg) (ExpC _ Zero) (ExpC _ Fold1Arg)) = False -- equal to 0
+isSimpleHead (If (ExpC _ Fold2Arg) (ExpC _ Zero) (ExpC _ Fold2Arg)) = False -- equal to 0
 isSimpleHead (If (ExpC _ (Not a)) b c) = False
+isSimpleHead (If a b c) | b == c = False -- equal to b
 isSimpleHead (If a b c) = True
 
 isSimpleHead (Fold a b c) = True
@@ -55,6 +60,8 @@ isSimpleHead (Not (ExpC _ (Not a))) = False
 isSimpleHead (Not a) = True
 
 isSimpleHead (Shl1 (ExpC _ Zero)) = False
+isSimpleHead (Shl1 (ExpC _ (Shr4 a))) = False -- symmetric to shr4 (shl1 ..)
+isSimpleHead (Shl1 (ExpC _ (Shr16 a))) = False -- symmetric to shr16 (shl1 ..)
 isSimpleHead (Shl1 a) = True
 
 isSimpleHead (Shr1 (ExpC _ Zero)) = False
@@ -143,11 +150,12 @@ generateRestricted' tfold n restriction =
     foldBodies :: (?tfold :: Bool, MonadLevel m) => Int -> m ExpC
     foldBodies n = do
       let filledCache = let ?cache = M.empty
-                        in M.fromList [((i, InFoldBody), [(e,f) | (e,f) <- serExp' i restriction InFoldBody, isSimpleC e])
+                        in M.fromList [((i, InFoldBody), [(e,f) | (e,f) <- serExp' i restriction InFoldBody, isSimpleC e, usesFold2Arg e, usesFold1Arg e])
                                       | i <- [cacheMin .. min n cacheMax]
                                       ]
       let ?cache = filledCache
       (e, hasFold) <- serExp' n (restriction .&. complement (1 `shiftL` 10)) InFoldBody -- Fold should not be there, but remove it just in case
+      guard $ usesFold2Arg e && usesFold1Arg e -- since initial value for acc in tfold is known, bodies that use just acc are not interesting
       return e
 
 -- Generators are restricted to allowed function set
@@ -196,7 +204,7 @@ serExpression :: (MonadLevel m) => Int -> Restriction -> m ExpC
 serExpression n restriction = do
   let ?tfold = False
   let filledCache = let ?cache = M.empty
-                    in M.fromList [((i, fs), [(e,f) | (e,f) <- serExp' i restriction fs, isSimpleC e])
+                    in M.fromList [((i, fs), [(e,f) | (e,f) <- (serExp' i restriction fs), isSimpleC e, fs /= InFoldBody || usesFold2Arg e])
                                   | i <- [cacheMin .. min n cacheMax],
                                     fs <- [NoFold, ExternalFold, InFoldBody]
                                    ]
@@ -256,13 +264,57 @@ serFold n restriction = level $ do
   sizeArg <- elements [1..n - 4]
   sizeSeed <- elements [1..n - 3 - sizeArg]
   let sizeBody = n - 2 - sizeArg - sizeSeed
+  (c, foldC) <- serExp' sizeBody restriction InFoldBody
+  guard (usesFold2Arg c)
+  -- TODO: is this really true that for tfold we could have ridiculous bodies that do not use foldAcc?
   (a, foldA) <- serExp' sizeArg restriction ExternalFold
   (b, foldB) <- serExp' sizeSeed restriction ExternalFold
-  (c, foldC) <- serExp' sizeBody restriction InFoldBody
   if isSimpleHead (Fold a b c)
     then return (fold_ a b c, True)
     else mzero
+    
+usesFold2Arg :: ExpC -> Bool
+usesFold2Arg (ExpC _ e) = u e
+  where
+    u Zero = False
+    u One = False
+    u MainArg = False
+    u Fold1Arg = False
+    u Fold2Arg = True
+    u (If a b c) = {- usesFold2Arg a || -} usesFold2Arg b || usesFold2Arg c -- if0 branches should refer to fold2Arg, otherwise they are as good as constant
+    u (Fold a b c) = usesFold2Arg a || usesFold2Arg b || usesFold2Arg c -- should not happen, but still
+    u (Not a) = usesFold2Arg a
+    u (Shl1 a) = usesFold2Arg a
+    u (Shr1 a) = usesFold2Arg a
+    u (Shr4 a) = usesFold2Arg a
+    u (Shr16 a) = usesFold2Arg a
+    u (And a b) = usesFold2Arg a || usesFold2Arg b
+    u (Or a b) = usesFold2Arg a || usesFold2Arg b
+    u (Xor a b) = usesFold2Arg a || usesFold2Arg b
+    u (Plus a b) = usesFold2Arg a || usesFold2Arg b
 
+usesFold1Arg :: ExpC -> Bool
+usesFold1Arg (ExpC _ e) = u e
+  where
+    u Zero = False
+    u One = False
+    u MainArg = False
+    u Fold1Arg = True
+    u Fold2Arg = False
+    u (If a b c) = {- usesFold1Arg a || -} usesFold1Arg b || usesFold1Arg c -- if0 branches should refer to fold2Arg, otherwise they are as good as constant
+    u (Fold a b c) = usesFold1Arg a || usesFold1Arg b || usesFold1Arg c -- should not happen, but still
+    u (Not a) = usesFold1Arg a
+    u (Shl1 a) = usesFold1Arg a
+    u (Shr1 a) = usesFold1Arg a
+    u (Shr4 a) = usesFold1Arg a
+    u (Shr16 a) = usesFold1Arg a
+    u (And a b) = usesFold1Arg a || usesFold1Arg b
+    u (Or a b) = usesFold1Arg a || usesFold1Arg b
+    u (Xor a b) = usesFold1Arg a || usesFold1Arg b
+    u (Plus a b) = usesFold1Arg a || usesFold1Arg b
+
+    
+    
 serUnop :: (MonadLevel m, ?tfold :: Bool, ?cache :: Cache) => Int -> Restriction -> FoldState -> (ExpC -> ExpC) -> m (ExpC, Bool)
 serUnop n restriction fs op = level $ do
   (a, foldA) <- serExp' (n-1) restriction fs
