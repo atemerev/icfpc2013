@@ -9,7 +9,7 @@ ppProg = render . ppProgDoc
 ppProgDoc :: ExpC -> Doc
 ppProgDoc e = parens $ text "lambda" <+> parens (text "x") <+> ppExpCDoc e
 
-ppExpCDoc (ExpC _ e) = ppExpDoc e
+ppExpCDoc ec = ppExpDoc $ expr ec
 
 ppExpDoc :: Exp -> Doc
 ppExpDoc e =

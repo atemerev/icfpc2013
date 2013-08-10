@@ -34,7 +34,7 @@ isSimple :: Exp -> Bool
 
 isSimple Zero = True
 isSimple One = True
-isSimple e | isConstExpr e && (\v -> v == 0 || v == 1) (eval 0 0 0 (ExpC Nothing e)) = False
+isSimple e | isConstExpr e && (\v -> v == 0 || v == 1) (eval 0 0 0 (ExpC Nothing 0 e)) = False
 isSimple e = isSimpleHead e && isSimpleParts e
 
 isSimpleHead Zero = True
@@ -43,52 +43,52 @@ isSimpleHead MainArg = True
 isSimpleHead Fold1Arg = True
 isSimpleHead Fold2Arg = True
 
-isSimpleHead (If a (ExpC _ Zero) (ExpC _ Zero)) = False
-isSimpleHead (If a (ExpC _ One) (ExpC _ One)) = False
-isSimpleHead (If (ExpC _ (Not a)) b c) = False
+isSimpleHead (If a b c) | expr b == Zero && expr c == Zero = False
+isSimpleHead (If a b c) | expr b == One && expr c == One = False
+isSimpleHead (If (ExpC _ _ (Not a)) b c) = False
 isSimpleHead (If a b c) = True
 
 isSimpleHead (Fold a b c) = True
 
-isSimpleHead (Not (ExpC _ (Not a))) = False
+isSimpleHead (Not (ExpC _ _ (Not a))) = False
 isSimpleHead (Not a) = True
 
-isSimpleHead (Shl1 (ExpC _ Zero)) = False
+isSimpleHead (Shl1 a) | expr a == Zero = False
 isSimpleHead (Shl1 a) = True
 
-isSimpleHead (Shr1 (ExpC _ Zero)) = False
-isSimpleHead (Shr1 (ExpC _ One))  = False
+isSimpleHead (Shr1 a) | expr a == Zero = False
+isSimpleHead (Shr1 a) | expr a == One  = False
 isSimpleHead (Shr1 a) = True
 
-isSimpleHead (Shr4 (ExpC _ Zero)) = False
-isSimpleHead (Shr4 (ExpC _ One))  = False
-isSimpleHead (Shr4 (ExpC _ (Shr1 a))) = False
+isSimpleHead (Shr4 a) | expr a == Zero = False
+isSimpleHead (Shr4 a) | expr a == One  = False
+isSimpleHead (Shr4 (ExpC _ _ (Shr1 a))) = False
 isSimpleHead (Shr4 a) = True
 
-isSimpleHead (Shr16 (ExpC _ Zero)) = False
-isSimpleHead (Shr16 (ExpC _ One))  = False
-isSimpleHead (Shr16 (ExpC _ (Shr1 a))) = False
-isSimpleHead (Shr16 (ExpC _ (Shr4 a))) = False
+isSimpleHead (Shr16 a) | expr a == Zero = False
+isSimpleHead (Shr16 a) | expr a == One  = False
+isSimpleHead (Shr16 (ExpC _ _ (Shr1 a))) = False
+isSimpleHead (Shr16 (ExpC _ _ (Shr4 a))) = False
 isSimpleHead (Shr16 a) = True
 
-isSimpleHead (And (ExpC _ Zero) b) = False
-isSimpleHead (And a (ExpC _ Zero)) = False
+isSimpleHead (And (ExpC _ _ Zero) b) = False
+isSimpleHead (And a (ExpC _ _ Zero)) = False
 -- Normal form: first operand must be smaller in size
 isSimpleHead (And a b) | expCSize a > expCSize b || a >= b = False
 isSimpleHead (And a b) = True
 
-isSimpleHead (Or (ExpC _ Zero) b) = False
-isSimpleHead (Or a (ExpC _ Zero)) = False
+isSimpleHead (Or (ExpC _ _ Zero) b) = False
+isSimpleHead (Or a (ExpC _ _ Zero)) = False
 isSimpleHead (Or a b) | expCSize a > expCSize b || a >= b = False
 isSimpleHead (Or a b) = True
 
-isSimpleHead (Xor (ExpC _ Zero) b) = False
-isSimpleHead (Xor a (ExpC _ Zero)) = False
+isSimpleHead (Xor (ExpC _ _ Zero) b) = False
+isSimpleHead (Xor a (ExpC _ _ Zero)) = False
 isSimpleHead (Xor a b) | expCSize a > expCSize b || a >= b = False
 isSimpleHead (Xor a b) = True
 
-isSimpleHead (Plus (ExpC _ Zero) b) = False
-isSimpleHead (Plus a (ExpC _ Zero)) = False
+isSimpleHead (Plus (ExpC _ _ Zero) b) = False
+isSimpleHead (Plus a (ExpC _ _ Zero)) = False
 isSimpleHead (Plus a b) | expCSize a > expCSize b || a >= b = False
 isSimpleHead (Plus a b) = True
 
