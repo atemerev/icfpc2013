@@ -20,14 +20,18 @@ inFoldExprCount = ufC
 topLevelNoFoldCount = afsC
 topLevelCount = afC
 -- tfold is `(lambda (x) (fold x 0 (lambda (x y) e))`, and the only changing part is `e`, so tfold's size is the size of `e` + 5
-tfoldCount = array (1,size) $ [(i,0) | i <- [1..5]] ++ [(i, inFoldExprCount ! (i-5)) | i <- [6..30]]
+tfoldCount = tfC
 
-ufnf, uf, afs, af :: Int -> Integer
-ufnfC, ufC, afsC, afC :: Array Int Integer
+
+-------------------------------------------------------------------------------
+
+ufnf, uf, afs, af, tf :: Int -> Integer
+ufnfC, ufC, afsC, afC, tfC :: Array Int Integer
 
 ufnfC = array (1,size) [(i, ufnf i) | i <- [1..size]]
 afsC = array (1,size) [(i, afs i) | i <- [1..size]]
 ufC = array (1,size) [(i, uf i) | i <- [1..size]]
+tfC = array (1,size) [(i, tf i) | i <- [1..size]]
 afC = array (1,size) [(i, af i) | i <- [1..size]]
 
 
@@ -55,6 +59,14 @@ af n = 5 * afC ! (n-1) +                                                        
        4 * 2 * sum [ afC ! i * afsC ! j | i <- [1..n-2], let j = n-1-i ] +                            -- op2 af afs, op2 afs af
        3 * sum [ afC ! i * afsC ! j * afsC ! k | i <- [1..n-3], j <- [1..n-2-i], let k = n-1-i-j ] +  -- if0 af afs afs, if0 afs af afs, if0 afs afs af
        sum [ ufnfC ! i * ufnfC ! j * ufC ! k | i <- [1..n-3], j <- [1..n-2-i], let k = n-1-i-j ]      -- fold ufnf ufnf uf
+
+-- expression in tfold, can't contain x, can't contain fold, size is minimum 6
+tf n | n <= 5 = 0
+     | n == 6 = 4                                                                                     -- 0 1 y z
+     | otherwise = let m = n-5 in
+       5 * ufC ! (m-1) +                                                                              -- op1 tf
+       4 * sum [ ufC ! i * ufC ! j | i <- [1..m-2], let j = m-1-i ] +                                 -- op2 tf tf
+       sum [ ufC ! i * ufC ! j * ufC ! k | i <- [1..m-3], j <- [1..m-2-i], let k = m-1-i-j ]          -- if0 tf tf tf
 
 main = do
   putStrLn "size,inFoldArgsCount,inFoldExprCount,topLevelNoFoldCount,topLevelCount,tfoldCount"
