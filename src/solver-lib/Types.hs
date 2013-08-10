@@ -100,7 +100,7 @@ mainArg = ExpC seed MainArg
 -- fold1Arg =   | Fold1Arg
 -- fold2Arg =   | Fold2Arg
 if0 a b c = ExpC (if (cached a) == 0 then cached b else cached c) (If a b c)
-fold a b c =  ExpC (foldImpl seed (cached a) (cached b) c) (Fold a b c)
+fold_ a b c =  ExpC (foldImpl seed (cached a) (cached b) c) (Fold a b c)
 not a   = ExpC (complement (cached a)) (Not a)
 shl1 a  = ExpC (shiftL (cached a) 1) (Shl1 a)
 shr1 a  = ExpC (shiftR (cached a) 1) (Shr1 a)
