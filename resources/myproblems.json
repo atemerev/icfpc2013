@@ -231,6 +231,8 @@
     "id": "0vaTfPCb3UTKTZmI6wmEgPzc"
   },
   {
+    "timeLeft": 0,
+    "solved": true,
     "operators": [
       "fold",
       "not",
@@ -1034,6 +1036,8 @@
     "id": "3PzLvBOP6JBEQygxyrAxze8g"
   },
   {
+    "timeLeft": 0,
+    "solved": true,
     "operators": [
       "fold",
       "not",
@@ -3215,6 +3219,8 @@
     "id": "AAU47KLo3KrtcMROfI0iOLok"
   },
   {
+    "timeLeft": 0,
+    "solved": true,
     "operators": [
       "if0",
       "not",
@@ -3503,6 +3509,8 @@
     "id": "AcgNNAdLwuRo9Cij30jl1J7B"
   },
   {
+    "timeLeft": 0,
+    "solved": true,
     "operators": [
       "and",
       "fold",
@@ -4519,6 +4527,8 @@
     "id": "CJTFNYXcLNRVEL60PGHgbMIZ"
   },
   {
+    "timeLeft": 0,
+    "solved": true,
     "operators": [
       "and",
       "if0",
@@ -5135,7 +5145,7 @@
     "id": "Dz6DnI4elhmlDRNgKwTp5SaP"
   },
   {
-    "timeLeft": 232.97899999999998,
+    "timeLeft": 0,
     "solved": true,
     "operators": [
       "fold",
@@ -5954,6 +5964,8 @@
     "id": "GAGhYQ3QaSHDUYJVaGoHOvKb"
   },
   {
+    "timeLeft": 0,
+    "solved": true,
     "operators": [
       "and",
       "fold",
@@ -6007,6 +6019,8 @@
     "id": "GEAK11OGHhhcwikqCNSwxf0j"
   },
   {
+    "timeLeft": 0,
+    "solved": true,
     "operators": [
       "and",
       "if0",
@@ -6235,6 +6249,8 @@
     "id": "GlMFdl21q4cBA446aHvFhL8k"
   },
   {
+    "timeLeft": 0,
+    "solved": false,
     "operators": [
       "fold",
       "plus",
