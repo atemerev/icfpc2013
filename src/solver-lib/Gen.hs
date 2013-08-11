@@ -227,7 +227,16 @@ generateRestricted n rst (alz, arz) =
 generateRestricted' :: MonadLevel m => Bool -> Bool -> Int -> Restriction -> m ExpC
 generateRestricted' bonus tfold n restriction = 
   if bonus
-  then undefined
+  then do (e,_,_,_) <- do -- let filledCache = 
+                          --       let ?cache = M.empty
+                          --           ?tfold = False
+                          --       in M.fromList [((i, ExternalFold), [p | p@(e,f,_,_) <- (serExp' i (restriction `removeOpRestriction` If_op) ExternalFold), isSimpleC e])
+                          --                     | i <- [5 .. 9]
+                          --                     ]
+                          let ?cache = M.empty
+                              ?tfold = False -- always
+                            in serIf True n restriction ExternalFold
+          return e
   else    
     if tfold
     then
@@ -321,7 +330,7 @@ serExp' 3 restriction fs = msum $ concat [
   map (\op -> serUnop 3 restriction fs op) (allowedUnaryOps restriction),
   map (\op -> serBinop 3 restriction fs op) (allowedBinaryOps restriction)]
 serExp' n restriction fs = msum $ concat [
-  if (n >= 4 && allowedIf restriction) then [serIf n restriction fs] else [],
+  if (n >= 4 && allowedIf restriction) then [serIf False n restriction fs] else [],
   if (n >= 5 && fs == NoFold && allowedFold restriction) then [serFold n (restriction `removeOpRestriction` Fold_op)] else [],
   map (\op -> serUnop n restriction fs op) (allowedUnaryOps restriction),
   map (\op -> serBinop n restriction fs op) (allowedBinaryOps restriction)]
@@ -329,9 +338,14 @@ serExp' n restriction fs = msum $ concat [
 serIf :: (MonadLevel m, ?tfold :: Bool, ?cache :: Cache) => Bool -> Int -> Restriction -> FoldState -> m (ExpC, Bool, Int, Int)
 -- bonus tasks have top-level if with a b c components of roughly equal size without nested ifs
 -- "bonus" controls if we are generating this special "if"
-serIf bonus n restriction@(Restriction opsOrig alz arz) fs = do
-  let ops = if bonus then opsOrig `removeOpRestriction` If0_op else opsOrig
-  sizeA <- elements [1..n - 3]
+serIf bonus n restriction_orig@(Restriction ops alz arz) fs = do
+  let restriction@(Restriction ops alz arz) = 
+        if bonus then restriction_orig `removeOpRestriction` If_op
+        else restriction_orig
+  let (a_lo, a_hi) = 
+        if bonus then if n < 30 then (5,9) else (9,15)
+        else (1,n-3)
+  sizeA <- elements [a_lo, a_hi]
   let opsOnly = noRestriction {allowedOps = ops}
   let restrictionA = opsOnly
   let restrictionB = opsOnly
@@ -339,7 +353,10 @@ serIf bonus n restriction@(Restriction opsOrig alz arz) fs = do
   if isConstExprC a
     then mzero
     else do
-      sizeB <- elements [1..n - 2 - sizeA]
+      let (b_lo, b_hi) = if bonus 
+                         then (if n < 30 then (5,9) else (9,15))
+                         else (1,n - 2 - sizeA)
+      sizeB <- elements [b_lo..b_hi]
       let sizeC = n - 1 - sizeA - sizeB
       (b, foldB, lzb, rzb) <- serExp' sizeB restrictionB (if foldA then ExternalFold else fs)
       -- Respecting restriction "at most alz constant-zero bits allowed in if(..) b else c":
