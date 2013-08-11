@@ -2,50 +2,6 @@
   {
     "operators": [
       "if0",
-      "not",
-      "or",
-      "plus",
-      "shr1",
-      "shr16",
-      "shr4",
-      "tfold"
-    ],
-    "id": "0Mu9R8vtA1ItznXZVxwYcynW",
-    "size": 28
-  },
-  {
-    "operators": [
-      "and",
-      "if0",
-      "not",
-      "or",
-      "plus",
-      "shl1",
-      "shr1",
-      "shr4",
-      "xor"
-    ],
-    "id": "0eNg789ckg9MMRoM5mYC0pwz",
-    "size": 24
-  },
-  {
-    "operators": [
-      "and",
-      "if0",
-      "not",
-      "or",
-      "plus",
-      "shl1",
-      "shr1",
-      "shr16",
-      "xor"
-    ],
-    "id": "0tM3FkRB3Zvl5Poa1xZ923sy",
-    "size": 28
-  },
-  {
-    "operators": [
-      "if0",
       "or",
       "plus",
       "shr1",
@@ -87,6 +43,7 @@
     "size": 30
   },
   {
+    "timeLeft": 133.328,
     "operators": [
       "fold",
       "if0",
@@ -99,23 +56,8 @@
       "xor"
     ],
     "id": "1PqNLSvkdWfSMAJ9jCmfSBOB",
-    "size": 30
-  },
-  {
-    "operators": [
-      "fold",
-      "if0",
-      "not",
-      "or",
-      "plus",
-      "shl1",
-      "shr1",
-      "shr16",
-      "shr4",
-      "xor"
-    ],
-    "id": "2ZeD6SQ2vUIQyO5Vj7KwTsrF",
-    "size": 26
+    "size": 30,
+    "solved": false
   },
   {
     "operators": [
@@ -162,21 +104,6 @@
   {
     "operators": [
       "and",
-      "if0",
-      "not",
-      "or",
-      "shl1",
-      "shr1",
-      "shr16",
-      "tfold",
-      "xor"
-    ],
-    "id": "4XU10kchhMlUPDT8JcLecbMX",
-    "size": 29
-  },
-  {
-    "operators": [
-      "and",
       "fold",
       "if0",
       "not",
@@ -189,19 +116,6 @@
     ],
     "id": "4dvOBT7SPgAtFjLfIK5Wo2sC",
     "size": 30
-  },
-  {
-    "operators": [
-      "if0",
-      "not",
-      "plus",
-      "shl1",
-      "shr1",
-      "shr16",
-      "xor"
-    ],
-    "id": "6GJaY2BqXr0x9HEqfNBDv4Bm",
-    "size": 29
   },
   {
     "operators": [
@@ -271,52 +185,6 @@
       "plus",
       "shl1",
       "shr16",
-      "xor"
-    ],
-    "id": "8G4VNisw5gwwIMib5uRn5uT8",
-    "size": 29
-  },
-  {
-    "operators": [
-      "and",
-      "if0",
-      "not",
-      "or",
-      "shl1",
-      "shr1",
-      "shr16",
-      "tfold",
-      "xor"
-    ],
-    "id": "8HALEt060Qq4DUqkQfjyD36V",
-    "size": 29
-  },
-  {
-    "operators": [
-      "and",
-      "fold",
-      "if0",
-      "not",
-      "or",
-      "plus",
-      "shl1",
-      "shr1",
-      "shr16",
-      "shr4",
-      "xor"
-    ],
-    "id": "8uT2uGc3oi2m4BNTYz7GNRwB",
-    "size": 27
-  },
-  {
-    "operators": [
-      "and",
-      "if0",
-      "not",
-      "or",
-      "plus",
-      "shl1",
-      "shr16",
       "shr4",
       "tfold",
       "xor"
@@ -370,21 +238,6 @@
   {
     "operators": [
       "and",
-      "if0",
-      "not",
-      "or",
-      "plus",
-      "shl1",
-      "shr16",
-      "shr4",
-      "xor"
-    ],
-    "id": "AXErbSRXgpzgrcKYg3rgv0bl",
-    "size": 28
-  },
-  {
-    "operators": [
-      "and",
       "fold",
       "if0",
       "or",
@@ -394,20 +247,6 @@
       "xor"
     ],
     "id": "AXHvejnBcKxempYmelIu4ATX",
-    "size": 29
-  },
-  {
-    "operators": [
-      "and",
-      "if0",
-      "or",
-      "plus",
-      "shl1",
-      "shr16",
-      "shr4",
-      "xor"
-    ],
-    "id": "AXds3sZAmVRW4V2PBzAuaf3S",
     "size": 29
   },
   {
@@ -424,21 +263,6 @@
     ],
     "id": "Af7VNBUaYsK4idWwSovHRDNN",
     "size": 25
-  },
-  {
-    "operators": [
-      "and",
-      "if0",
-      "not",
-      "or",
-      "shl1",
-      "shr1",
-      "shr4",
-      "tfold",
-      "xor"
-    ],
-    "id": "AlmY6NHHwHWcHcJHQwwGHrzG",
-    "size": 29
   },
   {
     "operators": [
@@ -501,49 +325,6 @@
   },
   {
     "operators": [
-      "if0",
-      "not",
-      "or",
-      "plus",
-      "shr1",
-      "shr16",
-      "shr4",
-      "tfold",
-      "xor"
-    ],
-    "id": "BUBCBfLZjJbfWv5OLnKYkyfE",
-    "size": 28
-  },
-  {
-    "operators": [
-      "and",
-      "if0",
-      "not",
-      "or",
-      "plus",
-      "shr1",
-      "shr16",
-      "xor"
-    ],
-    "id": "BYLgpZTeCwSWXtAr4pm9XEw1",
-    "size": 28
-  },
-  {
-    "operators": [
-      "and",
-      "if0",
-      "not",
-      "or",
-      "shr1",
-      "shr16",
-      "shr4",
-      "xor"
-    ],
-    "id": "Batly5nP5o0ymBEAU9qw9U2k",
-    "size": 30
-  },
-  {
-    "operators": [
       "and",
       "if0",
       "not",
@@ -591,82 +372,6 @@
       "and",
       "fold",
       "if0",
-      "or",
-      "plus",
-      "shl1",
-      "shr1",
-      "shr16",
-      "shr4"
-    ],
-    "id": "CAdRhRYCh86AZivmAYTYAKEs",
-    "size": 26
-  },
-  {
-    "operators": [
-      "and",
-      "if0",
-      "not",
-      "or",
-      "plus",
-      "shr1",
-      "shr16",
-      "xor"
-    ],
-    "id": "DBvB8XddxnzUMiA4kLzr2TrR",
-    "size": 29
-  },
-  {
-    "operators": [
-      "if0",
-      "or",
-      "plus",
-      "shl1",
-      "shr1",
-      "shr16",
-      "shr4",
-      "tfold",
-      "xor"
-    ],
-    "id": "EEdeAJywhYeRBYCle2SPDHsB",
-    "size": 28
-  },
-  {
-    "operators": [
-      "and",
-      "if0",
-      "not",
-      "or",
-      "plus",
-      "shl1",
-      "shr1",
-      "shr16",
-      "shr4"
-    ],
-    "id": "EgCTOuWYHliCf761xq9WqGmN",
-    "size": 26
-  },
-  {
-    "timeLeft": 224.765,
-    "operators": [
-      "fold",
-      "if0",
-      "or",
-      "plus",
-      "shl1",
-      "shr1",
-      "shr16",
-      "shr4",
-      "xor"
-    ],
-    "id": "EvACnklbcDmiMzkvk2ciqipQ",
-    "size": 28,
-    "solved": false
-  },
-  {
-    "operators": [
-      "and",
-      "fold",
-      "if0",
       "not",
       "or",
       "shl1",
@@ -677,35 +382,6 @@
     ],
     "id": "F3nDwwpc6qZdX5FwcXlxgjTk",
     "size": 28
-  },
-  {
-    "operators": [
-      "fold",
-      "if0",
-      "not",
-      "or",
-      "shl1",
-      "shr16",
-      "shr4",
-      "xor"
-    ],
-    "id": "F5zOhOBNspISNNoEhWPfPSYA",
-    "size": 29
-  },
-  {
-    "operators": [
-      "and",
-      "if0",
-      "not",
-      "or",
-      "plus",
-      "shl1",
-      "shr1",
-      "shr16",
-      "xor"
-    ],
-    "id": "F7eqZBNn5tKdq8cZSuA8uoIW",
-    "size": 24
   },
   {
     "operators": [
@@ -723,20 +399,7 @@
     "size": 30
   },
   {
-    "operators": [
-      "and",
-      "if0",
-      "not",
-      "shl1",
-      "shr1",
-      "shr4",
-      "tfold",
-      "xor"
-    ],
-    "id": "FOmz4zKW9XlIQRdTGICz192f",
-    "size": 28
-  },
-  {
+    "timeLeft": 210.52100000000002,
     "operators": [
       "and",
       "fold",
@@ -749,7 +412,8 @@
       "xor"
     ],
     "id": "FrKxlGbWC1AJhTBljVQnzouI",
-    "size": 25
+    "size": 25,
+    "solved": false
   },
   {
     "operators": [
@@ -778,36 +442,6 @@
     ],
     "id": "G1BAyznnh6t87K6QngYLRQHJ",
     "size": 29
-  },
-  {
-    "operators": [
-      "and",
-      "fold",
-      "if0",
-      "not",
-      "or",
-      "shr1",
-      "shr16",
-      "shr4",
-      "xor"
-    ],
-    "id": "G44PBuZs46UoWRFhyF0eGL7s",
-    "size": 28
-  },
-  {
-    "operators": [
-      "and",
-      "fold",
-      "if0",
-      "not",
-      "plus",
-      "shl1",
-      "shr1",
-      "shr4",
-      "xor"
-    ],
-    "id": "GWl82dkAIqbNABjfRAkJ0ZPo",
-    "size": 26
   },
   {
     "operators": [
@@ -841,35 +475,6 @@
   },
   {
     "operators": [
-      "if0",
-      "not",
-      "or",
-      "plus",
-      "shr1",
-      "shr16",
-      "shr4",
-      "tfold",
-      "xor"
-    ],
-    "id": "IAFTavI60eVmTfV9YcNBQK5w",
-    "size": 30
-  },
-  {
-    "operators": [
-      "and",
-      "if0",
-      "not",
-      "or",
-      "plus",
-      "shr1",
-      "shr16",
-      "shr4"
-    ],
-    "id": "IChAyomkVTu0LyW1LBeumKsH",
-    "size": 27
-  },
-  {
-    "operators": [
       "and",
       "fold",
       "if0",
@@ -881,65 +486,6 @@
     ],
     "id": "IDVxoCZhweeRXiWTpDD73eMs",
     "size": 29
-  },
-  {
-    "operators": [
-      "and",
-      "if0",
-      "not",
-      "plus",
-      "shl1",
-      "shr16",
-      "shr4",
-      "tfold",
-      "xor"
-    ],
-    "id": "IGw93LjZXannqUfL0WaowJRo",
-    "size": 30
-  },
-  {
-    "operators": [
-      "and",
-      "if0",
-      "not",
-      "or",
-      "plus",
-      "shl1",
-      "shr1",
-      "shr16",
-      "xor"
-    ],
-    "id": "IImDiuKjxyiVjaMSjPjzzABo",
-    "size": 24
-  },
-  {
-    "operators": [
-      "if0",
-      "not",
-      "or",
-      "plus",
-      "shr1",
-      "shr16",
-      "shr4",
-      "xor"
-    ],
-    "id": "IidNX0CWIri7WcLPPplZHjJb",
-    "size": 27
-  },
-  {
-    "operators": [
-      "and",
-      "fold",
-      "if0",
-      "or",
-      "shl1",
-      "shr1",
-      "shr16",
-      "shr4",
-      "xor"
-    ],
-    "id": "IuvGVIM44bvFx4hY8fNBc4DT",
-    "size": 26
   },
   {
     "operators": [
@@ -956,68 +502,6 @@
     ],
     "id": "IxzCoZMNhYtZfuTZZstKL0Wt",
     "size": 27
-  },
-  {
-    "operators": [
-      "if0",
-      "not",
-      "or",
-      "plus",
-      "shl1",
-      "shr1",
-      "shr16",
-      "shr4",
-      "xor"
-    ],
-    "id": "JMwSBvT1AcjsrHOmnWEkRD50",
-    "size": 29
-  },
-  {
-    "operators": [
-      "fold",
-      "if0",
-      "not",
-      "or",
-      "plus",
-      "shl1",
-      "shr1",
-      "shr16",
-      "shr4",
-      "xor"
-    ],
-    "id": "JYlIowcQp3n1Tl4Ex8Sk9DUA",
-    "size": 26
-  },
-  {
-    "operators": [
-      "and",
-      "if0",
-      "or",
-      "plus",
-      "shl1",
-      "shr1",
-      "shr16",
-      "shr4",
-      "xor"
-    ],
-    "id": "Jw0fNeEt8s3QRi2KMwpA4CJe",
-    "size": 28
-  },
-  {
-    "timeLeft": 121.53999999999999,
-    "operators": [
-      "and",
-      "if0",
-      "not",
-      "plus",
-      "shl1",
-      "shr16",
-      "shr4",
-      "xor"
-    ],
-    "id": "JwWHYpAGBuBkttNLkCIQiZFF",
-    "size": 26,
-    "solved": false
   },
   {
     "operators": [
@@ -1049,68 +533,6 @@
     ],
     "id": "KFMBvjSp7VhKsNpbKUih9IV8",
     "size": 30
-  },
-  {
-    "operators": [
-      "and",
-      "fold",
-      "if0",
-      "not",
-      "or",
-      "plus",
-      "shl1",
-      "shr1",
-      "shr4",
-      "xor"
-    ],
-    "id": "KmtIADLEqWsUkUh5YABjeduX",
-    "size": 29
-  },
-  {
-    "operators": [
-      "and",
-      "if0",
-      "not",
-      "or",
-      "shl1",
-      "shr1",
-      "shr16",
-      "shr4",
-      "tfold",
-      "xor"
-    ],
-    "id": "KqDYrtCEmAq4ttGAxoX4nY3j",
-    "size": 30
-  },
-  {
-    "operators": [
-      "and",
-      "if0",
-      "or",
-      "shl1",
-      "shr1",
-      "shr16",
-      "shr4",
-      "tfold",
-      "xor"
-    ],
-    "id": "LNuoHe0rIK0F9jBTsC4fMBQr",
-    "size": 29
-  },
-  {
-    "operators": [
-      "and",
-      "fold",
-      "if0",
-      "not",
-      "or",
-      "plus",
-      "shr1",
-      "shr16",
-      "shr4"
-    ],
-    "id": "LsaFqdpnpQ6YjDuGkZDxQd0B",
-    "size": 26
   },
   {
     "operators": [
@@ -1162,20 +584,6 @@
   },
   {
     "operators": [
-      "and",
-      "if0",
-      "not",
-      "or",
-      "plus",
-      "shr1",
-      "shr16",
-      "shr4"
-    ],
-    "id": "O5gRvRL8ODhOcB4huC1eLu8A",
-    "size": 30
-  },
-  {
-    "operators": [
       "if0",
       "not",
       "plus",
@@ -1189,6 +597,7 @@
     "size": 30
   },
   {
+    "timeLeft": 247.008,
     "operators": [
       "and",
       "fold",
@@ -1199,7 +608,8 @@
       "shr4"
     ],
     "id": "OW5bgCVuX5Q8iFzDfcuu4BcP",
-    "size": 29
+    "size": 29,
+    "solved": false
   },
   {
     "operators": [
@@ -1229,21 +639,6 @@
     ],
     "id": "OxKqSa0o2YO881BhAbqaLzWu",
     "size": 30
-  },
-  {
-    "operators": [
-      "and",
-      "if0",
-      "not",
-      "plus",
-      "shl1",
-      "shr1",
-      "shr16",
-      "shr4",
-      "xor"
-    ],
-    "id": "PNqyZnB63Qo2NAMpuKpb1LcM",
-    "size": 25
   },
   {
     "operators": [
@@ -1317,23 +712,6 @@
     ],
     "id": "QvprccSpaUfIQuv3us0jv4t2",
     "size": 29
-  },
-  {
-    "timeLeft": 75.076,
-    "operators": [
-      "and",
-      "fold",
-      "if0",
-      "not",
-      "or",
-      "plus",
-      "shr1",
-      "shr4",
-      "xor"
-    ],
-    "id": "RPbhB5XAtbmsv75AAoJ5f0vI",
-    "size": 30,
-    "solved": false
   },
   {
     "operators": [
@@ -1418,52 +796,6 @@
       "not",
       "or",
       "plus",
-      "shl1",
-      "shr1",
-      "shr16",
-      "xor"
-    ],
-    "id": "TZ8BnSzLC43sw6IBL9Yjb2P3",
-    "size": 28
-  },
-  {
-    "operators": [
-      "and",
-      "fold",
-      "if0",
-      "not",
-      "or",
-      "shl1",
-      "shr1",
-      "shr4",
-      "xor"
-    ],
-    "id": "TvV6bwBpC7B0P83LBiAfHxYq",
-    "size": 27
-  },
-  {
-    "timeLeft": 181.64600000000002,
-    "operators": [
-      "fold",
-      "if0",
-      "not",
-      "plus",
-      "shl1",
-      "shr1",
-      "shr16",
-      "xor"
-    ],
-    "id": "TwGAPTEwjrAhvweNsuaxfsru",
-    "size": 25,
-    "solved": false
-  },
-  {
-    "operators": [
-      "and",
-      "if0",
-      "not",
-      "or",
-      "plus",
       "shr1",
       "shr16",
       "shr4",
@@ -1471,21 +803,6 @@
     ],
     "id": "U4ObDAnDCmVZaRBfA99B5JWP",
     "size": 29
-  },
-  {
-    "operators": [
-      "and",
-      "if0",
-      "not",
-      "plus",
-      "shr1",
-      "shr16",
-      "shr4",
-      "tfold",
-      "xor"
-    ],
-    "id": "UG1aXjo99zPHCgMkywBgdFqw",
-    "size": 28
   },
   {
     "operators": [
@@ -1520,20 +837,6 @@
   {
     "operators": [
       "and",
-      "if0",
-      "or",
-      "plus",
-      "shl1",
-      "shr1",
-      "shr16",
-      "xor"
-    ],
-    "id": "Vaevfo3163Vhjz2SFvt4oLDN",
-    "size": 29
-  },
-  {
-    "operators": [
-      "and",
       "fold",
       "if0",
       "or",
@@ -1550,35 +853,6 @@
     "operators": [
       "and",
       "if0",
-      "or",
-      "shr1",
-      "shr16",
-      "shr4",
-      "tfold",
-      "xor"
-    ],
-    "id": "WGdXBNlkJoekhGki4aEhDmSz",
-    "size": 30
-  },
-  {
-    "operators": [
-      "and",
-      "if0",
-      "not",
-      "or",
-      "shl1",
-      "shr1",
-      "shr16",
-      "shr4",
-      "xor"
-    ],
-    "id": "WPjxyVGsEWt6NDwkhjkTlYJK",
-    "size": 29
-  },
-  {
-    "operators": [
-      "and",
-      "if0",
       "not",
       "plus",
       "shl1",
@@ -1589,22 +863,6 @@
     ],
     "id": "WcUraXT9HHQUWT0NXwfLw7B0",
     "size": 24
-  },
-  {
-    "operators": [
-      "and",
-      "if0",
-      "not",
-      "or",
-      "plus",
-      "shl1",
-      "shr1",
-      "shr16",
-      "shr4",
-      "tfold"
-    ],
-    "id": "X9UtPAWRZjyCwvtH9wBaM4MR",
-    "size": 29
   },
   {
     "operators": [
@@ -1698,48 +956,6 @@
   {
     "operators": [
       "and",
-      "if0",
-      "or",
-      "plus",
-      "shl1",
-      "shr1",
-      "shr16",
-      "xor"
-    ],
-    "id": "a7qJurCcC0C78AGppKJ5Tyvl",
-    "size": 26
-  },
-  {
-    "operators": [
-      "and",
-      "fold",
-      "if0",
-      "or",
-      "plus",
-      "shl1",
-      "shr1",
-      "shr4"
-    ],
-    "id": "aPNHS0rdSBaB95PcEOb9JPMr",
-    "size": 27
-  },
-  {
-    "operators": [
-      "and",
-      "if0",
-      "or",
-      "plus",
-      "shl1",
-      "shr16",
-      "shr4",
-      "xor"
-    ],
-    "id": "aZsUfiqpoGTz6fK8rXQ8PZHs",
-    "size": 29
-  },
-  {
-    "operators": [
-      "and",
       "fold",
       "if0",
       "not",
@@ -1765,21 +981,6 @@
     ],
     "id": "bF22jOjs89GFc08G18W9vtIX",
     "size": 27
-  },
-  {
-    "operators": [
-      "and",
-      "if0",
-      "not",
-      "or",
-      "shr1",
-      "shr16",
-      "shr4",
-      "tfold",
-      "xor"
-    ],
-    "id": "bHMPWGyUTxcEHbdr66hKFogO",
-    "size": 29
   },
   {
     "operators": [
@@ -1827,20 +1028,6 @@
   {
     "operators": [
       "and",
-      "if0",
-      "not",
-      "or",
-      "shl1",
-      "shr1",
-      "shr16",
-      "xor"
-    ],
-    "id": "d8kFAshCNkondoofXEIHm78Y",
-    "size": 30
-  },
-  {
-    "operators": [
-      "and",
       "fold",
       "if0",
       "not",
@@ -1855,6 +1042,7 @@
     "size": 30
   },
   {
+    "timeLeft": 65.37899999999999,
     "operators": [
       "and",
       "if0",
@@ -1867,7 +1055,8 @@
       "tfold"
     ],
     "id": "dcpQxY0uuSk5HfUGA3qygy3S",
-    "size": 29
+    "size": 29,
+    "solved": false
   },
   {
     "operators": [
@@ -1899,20 +1088,7 @@
     "size": 29
   },
   {
-    "operators": [
-      "if0",
-      "not",
-      "plus",
-      "shl1",
-      "shr1",
-      "shr16",
-      "shr4",
-      "tfold"
-    ],
-    "id": "euAH4Ts7tk6DgiKAOTvHK4H0",
-    "size": 30
-  },
-  {
+    "timeLeft": 110.04599999999999,
     "operators": [
       "fold",
       "if0",
@@ -1925,21 +1101,8 @@
       "xor"
     ],
     "id": "f0z6P3TFu3961z7UNPEeYB0e",
-    "size": 28
-  },
-  {
-    "operators": [
-      "fold",
-      "if0",
-      "not",
-      "plus",
-      "shl1",
-      "shr16",
-      "shr4",
-      "xor"
-    ],
-    "id": "fQmitJv8sY50Fo2KVU9lu1aE",
-    "size": 29
+    "size": 28,
+    "solved": false
   },
   {
     "operators": [
@@ -1956,83 +1119,6 @@
     "size": 30
   },
   {
-    "timeLeft": 281.123,
-    "operators": [
-      "and",
-      "if0",
-      "or",
-      "plus",
-      "shr1",
-      "shr16",
-      "shr4",
-      "tfold",
-      "xor"
-    ],
-    "id": "ftmTgAZInXEUlQ81jK3YK5tc",
-    "size": 30,
-    "solved": false
-  },
-  {
-    "operators": [
-      "if0",
-      "or",
-      "plus",
-      "shl1",
-      "shr1",
-      "shr16",
-      "shr4",
-      "tfold",
-      "xor"
-    ],
-    "id": "gWUNvSscMip0qDTSvDVFfKo4",
-    "size": 28
-  },
-  {
-    "operators": [
-      "fold",
-      "if0",
-      "not",
-      "or",
-      "plus",
-      "shl1",
-      "shr16",
-      "shr4",
-      "xor"
-    ],
-    "id": "h6iLm4RAJCRkBqwA3Onk8qfq",
-    "size": 26
-  },
-  {
-    "operators": [
-      "if0",
-      "not",
-      "or",
-      "plus",
-      "shl1",
-      "shr16",
-      "shr4",
-      "xor"
-    ],
-    "id": "hAUUpdEMY9qeW8l3PapjVkcj",
-    "size": 30
-  },
-  {
-    "operators": [
-      "fold",
-      "if0",
-      "not",
-      "or",
-      "plus",
-      "shl1",
-      "shr1",
-      "shr16",
-      "shr4",
-      "xor"
-    ],
-    "id": "hGtiQMwBLCdxDXpAavFv7umM",
-    "size": 29
-  },
-  {
     "operators": [
       "and",
       "if0",
@@ -2045,20 +1131,6 @@
       "xor"
     ],
     "id": "hI8SlTqzBUP4UPCTmBwgAueG",
-    "size": 28
-  },
-  {
-    "operators": [
-      "if0",
-      "not",
-      "or",
-      "plus",
-      "shl1",
-      "shr1",
-      "shr4",
-      "tfold"
-    ],
-    "id": "hLhB85zBfxcpboFlAPYNtyXv",
     "size": 28
   },
   {
@@ -2094,20 +1166,6 @@
   },
   {
     "operators": [
-      "fold",
-      "if0",
-      "or",
-      "plus",
-      "shl1",
-      "shr1",
-      "shr16",
-      "xor"
-    ],
-    "id": "heYH70sOOcP4kCab0ygYbLk4",
-    "size": 27
-  },
-  {
-    "operators": [
       "if0",
       "not",
       "or",
@@ -2137,6 +1195,7 @@
     "size": 27
   },
   {
+    "timeLeft": 46.486999999999995,
     "operators": [
       "fold",
       "if0",
@@ -2149,7 +1208,8 @@
       "xor"
     ],
     "id": "ifAEJBAWEoeJymU4jKuGKA9W",
-    "size": 26
+    "size": 26,
+    "solved": false
   },
   {
     "operators": [
@@ -2200,19 +1260,6 @@
     "operators": [
       "and",
       "if0",
-      "not",
-      "or",
-      "plus",
-      "shl1",
-      "xor"
-    ],
-    "id": "k6SHTJBXQtBwIZQd7g0vdW9S",
-    "size": 29
-  },
-  {
-    "operators": [
-      "and",
-      "if0",
       "or",
       "shl1",
       "shr1",
@@ -2238,22 +1285,6 @@
     ],
     "id": "kdmiAaKBWMHIdGck1PfU5BG6",
     "size": 28
-  },
-  {
-    "operators": [
-      "and",
-      "fold",
-      "if0",
-      "not",
-      "or",
-      "plus",
-      "shr1",
-      "shr16",
-      "shr4",
-      "xor"
-    ],
-    "id": "lBoc1zpcntEyqxsVTgn127GB",
-    "size": 29
   },
   {
     "operators": [
@@ -2292,55 +1323,11 @@
       "or",
       "plus",
       "shl1",
-      "shr1",
-      "shr16",
-      "shr4"
-    ],
-    "id": "mfyjS0xYxDmWHx1AxsdhAfxB",
-    "size": 25
-  },
-  {
-    "operators": [
-      "and",
-      "if0",
-      "not",
-      "or",
-      "plus",
-      "shl1",
       "shr16",
       "shr4",
       "xor"
     ],
     "id": "nBM5N3335sw0IcRp232DMlHc",
-    "size": 30
-  },
-  {
-    "operators": [
-      "and",
-      "if0",
-      "not",
-      "or",
-      "plus",
-      "shr1",
-      "shr16",
-      "shr4",
-      "xor"
-    ],
-    "id": "nM1dXtX45lWYAWZ43G3lVNs2",
-    "size": 28
-  },
-  {
-    "operators": [
-      "and",
-      "fold",
-      "if0",
-      "or",
-      "plus",
-      "shr1",
-      "shr16",
-      "xor"
-    ],
-    "id": "nUfPNXdUlPNw0BqPteNBx0Yq",
     "size": 30
   },
   {
@@ -2357,34 +1344,6 @@
     ],
     "id": "nkXrw6KIWw11vFvbirIxFwVm",
     "size": 28
-  },
-  {
-    "operators": [
-      "if0",
-      "not",
-      "or",
-      "shl1",
-      "shr16",
-      "shr4",
-      "tfold",
-      "xor"
-    ],
-    "id": "o9EltlHuZp2FXcGjGoN3AuhF",
-    "size": 28
-  },
-  {
-    "operators": [
-      "if0",
-      "not",
-      "or",
-      "plus",
-      "shr1",
-      "shr16",
-      "shr4",
-      "xor"
-    ],
-    "id": "oAOdBO7t4RqqZnPAbEQI8kSd",
-    "size": 27
   },
   {
     "operators": [
@@ -2421,21 +1380,6 @@
     "operators": [
       "and",
       "if0",
-      "not",
-      "or",
-      "plus",
-      "shr16",
-      "shr4",
-      "tfold",
-      "xor"
-    ],
-    "id": "pTeY4KdgzvpkdhJMr4xSwRDB",
-    "size": 30
-  },
-  {
-    "operators": [
-      "and",
-      "if0",
       "or",
       "plus",
       "shl1",
@@ -2446,35 +1390,6 @@
     ],
     "id": "ppDqMFAu15fxAldwWbIMaHBv",
     "size": 29
-  },
-  {
-    "operators": [
-      "and",
-      "if0",
-      "not",
-      "or",
-      "shl1",
-      "shr1",
-      "shr4",
-      "tfold",
-      "xor"
-    ],
-    "id": "q7QSNnCnDNL54TUqQHucADsB",
-    "size": 30
-  },
-  {
-    "operators": [
-      "and",
-      "if0",
-      "not",
-      "or",
-      "plus",
-      "shr1",
-      "shr4",
-      "xor"
-    ],
-    "id": "q9hoDLQ39e0A2wp1Q04gVoLE",
-    "size": 28
   },
   {
     "operators": [
@@ -2492,51 +1407,6 @@
     ],
     "id": "qFY4qXjdJECevVCI2BdtvuYD",
     "size": 26
-  },
-  {
-    "operators": [
-      "fold",
-      "if0",
-      "or",
-      "plus",
-      "shl1",
-      "shr1",
-      "shr16",
-      "shr4",
-      "xor"
-    ],
-    "id": "qK3RKhjjDUyVEdWMBa740nQG",
-    "size": 28
-  },
-  {
-    "operators": [
-      "and",
-      "fold",
-      "if0",
-      "not",
-      "or",
-      "plus",
-      "shr1",
-      "shr4",
-      "xor"
-    ],
-    "id": "qP6rA5r0q5jW8oIpW6LsZwIA",
-    "size": 30
-  },
-  {
-    "operators": [
-      "and",
-      "if0",
-      "not",
-      "plus",
-      "shl1",
-      "shr1",
-      "shr4",
-      "tfold",
-      "xor"
-    ],
-    "id": "qecxi7tzwd1YmX8BoBs9VPi6",
-    "size": 28
   },
   {
     "operators": [
@@ -2582,21 +1452,6 @@
     ],
     "id": "rSNA1Z5wzWsMzdDeWL9IcglX",
     "size": 30
-  },
-  {
-    "operators": [
-      "fold",
-      "if0",
-      "not",
-      "or",
-      "plus",
-      "shl1",
-      "shr1",
-      "shr4",
-      "xor"
-    ],
-    "id": "rfYXicsimxAGgo7z3ToBwBZ9",
-    "size": 27
   },
   {
     "operators": [
@@ -2673,35 +1528,6 @@
     ],
     "id": "tlJdfmCwaoX7T1B1KtYvI4TF",
     "size": 28
-  },
-  {
-    "operators": [
-      "and",
-      "if0",
-      "or",
-      "plus",
-      "shl1",
-      "shr1",
-      "shr16",
-      "xor"
-    ],
-    "id": "txYEFLsEcrSTWP5N7M6mdemO",
-    "size": 28
-  },
-  {
-    "operators": [
-      "and",
-      "fold",
-      "if0",
-      "not",
-      "or",
-      "plus",
-      "shl1",
-      "shr1",
-      "shr16"
-    ],
-    "id": "uDOk2U8lNIsHNAaBBcqfZ58m",
-    "size": 27
   },
   {
     "operators": [
@@ -2786,49 +1612,6 @@
       "plus",
       "shl1",
       "shr1",
-      "xor"
-    ],
-    "id": "vPpCH5zBo5LtfYd0XTl22AvE",
-    "size": 27
-  },
-  {
-    "operators": [
-      "and",
-      "if0",
-      "or",
-      "plus",
-      "shl1",
-      "shr1",
-      "shr16",
-      "shr4"
-    ],
-    "id": "voZg41uPAt84dBy5wAC3x5DL",
-    "size": 26
-  },
-  {
-    "operators": [
-      "and",
-      "if0",
-      "not",
-      "or",
-      "plus",
-      "shr16",
-      "shr4",
-      "tfold",
-      "xor"
-    ],
-    "id": "wYyc6YXvp86TDv3QefKoza5r",
-    "size": 30
-  },
-  {
-    "operators": [
-      "fold",
-      "if0",
-      "not",
-      "or",
-      "plus",
-      "shl1",
-      "shr1",
       "shr16",
       "shr4",
       "xor"
@@ -2883,50 +1666,6 @@
   },
   {
     "operators": [
-      "and",
-      "fold",
-      "if0",
-      "plus",
-      "shr1",
-      "shr16",
-      "shr4",
-      "xor"
-    ],
-    "id": "xK9GYMqiLOZUOmHY2BAE9eYM",
-    "size": 27
-  },
-  {
-    "operators": [
-      "and",
-      "if0",
-      "not",
-      "or",
-      "plus",
-      "shl1",
-      "shr1",
-      "shr16",
-      "shr4",
-      "tfold"
-    ],
-    "id": "xUMeJpG7aYvcBMzrHtZzQYDM",
-    "size": 30
-  },
-  {
-    "operators": [
-      "if0",
-      "not",
-      "or",
-      "shl1",
-      "shr1",
-      "shr16",
-      "shr4",
-      "xor"
-    ],
-    "id": "yXZWICBl338EVCCmZfLZzUIE",
-    "size": 28
-  },
-  {
-    "operators": [
       "fold",
       "if0",
       "not",
@@ -2938,35 +1677,6 @@
       "xor"
     ],
     "id": "yulWipREm34oCY37SPXWFYVZ",
-    "size": 30
-  },
-  {
-    "operators": [
-      "and",
-      "if0",
-      "not",
-      "or",
-      "plus",
-      "shl1",
-      "shr1",
-      "shr4"
-    ],
-    "id": "yzvNiH4Z0aTE94zHJkp54siM",
-    "size": 27
-  },
-  {
-    "operators": [
-      "if0",
-      "not",
-      "or",
-      "plus",
-      "shr1",
-      "shr16",
-      "shr4",
-      "tfold",
-      "xor"
-    ],
-    "id": "zAV7B2pBAHd59VSVPBpEjeGW",
     "size": 30
   }
 ]
