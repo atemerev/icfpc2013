@@ -326,8 +326,11 @@ serExp' n restriction fs = msum $ concat [
   map (\op -> serUnop n restriction fs op) (allowedUnaryOps restriction),
   map (\op -> serBinop n restriction fs op) (allowedBinaryOps restriction)]
 
-serIf :: (MonadLevel m, ?tfold :: Bool, ?cache :: Cache) => Int -> Restriction -> FoldState -> m (ExpC, Bool, Int, Int)
-serIf n restriction@(Restriction ops alz arz) fs = do
+serIf :: (MonadLevel m, ?tfold :: Bool, ?cache :: Cache) => Bool -> Int -> Restriction -> FoldState -> m (ExpC, Bool, Int, Int)
+-- bonus tasks have top-level if with a b c components of roughly equal size without nested ifs
+-- "bonus" controls if we are generating this special "if"
+serIf bonus n restriction@(Restriction opsOrig alz arz) fs = do
+  let ops = if bonus then opsOrig `removeOpRestriction` If0_op else opsOrig
   sizeA <- elements [1..n - 3]
   let opsOnly = noRestriction {allowedOps = ops}
   let restrictionA = opsOnly
