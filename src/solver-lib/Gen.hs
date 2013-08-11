@@ -393,8 +393,15 @@ usesFold1Arg (ExpC _ e) = u e
 serUnop :: (MonadLevel m, ?tfold :: Bool, ?cache :: Cache) => Int -> Restriction -> FoldState -> OpName -> m (ExpC, Bool, Int, Int)
 serUnop n restriction@(Restriction ops alz arz) fs op = level $ do
   let opsOnly = noRestriction {allowedOps = ops}
-  let restrictionArg = opsOnly
-  -- TODO Properly propagate restriction
+  let (alz', arz') = case op of {
+      Not_op -> (64, 64)
+    ; Shl1_op -> (min 64 (alz+1), arz-1)
+    ; Shr1_op -> (alz-1, min 64 (arz+1))
+    ; Shr4_op -> (alz-4, min 64 (arz+4))
+    ; Shr16_op -> (alz-16, min 64 (arz+16))
+    }
+  guard (alz' >= 0 && arz' >= 0)  -- Out of zeros budget: skip
+  let restrictionArg = Restriction ops alz' arz'
   (a, foldA, lza, rza) <- serExp' (n-1) restrictionArg fs
   let e = applyUnop op a
   if isSimpleHead (expr e)
