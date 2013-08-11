@@ -1,5 +1,5 @@
 {-# LANGUAGE ImplicitParams #-}
-module Gen (leftRightZerosUnop, leftRightZerosBinop, leftRightZeros, Restriction(..), generateRestricted, generateRestrictedUpTo, serProg, serExpression', noRestriction, restrictionFromList, OpName(..)) where
+module Gen (parityUnop, parityBinop, parity, leftRightZerosUnop, leftRightZerosBinop, leftRightZeros, Restriction(..), generateRestricted, generateRestrictedUpTo, serProg, serExpression', noRestriction, restrictionFromList, OpName(..)) where
 
 import Types
 import Test.SmallCheck
