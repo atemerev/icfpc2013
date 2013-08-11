@@ -17,7 +17,7 @@ data Problem = Problem { problemId :: String
                        , timeLeft :: Maybe Double
                        } deriving Show
 
-isUnsolved p = isNothing (solved p) || ( (solved p) == Just False && fromMaybe 0.0 (timeLeft p) > 0.0)
+isUnsolved p = isNothing (solved p) -- || ( (solved p) == Just False && fromMaybe 0.0 (timeLeft p) > 0.0)
 
 data ProgramOrId = Program String | ID String deriving Show
 data EvalRequest = EvalRequest { programOrId :: ProgramOrId
