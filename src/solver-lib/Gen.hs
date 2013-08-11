@@ -210,11 +210,11 @@ isSimpleParts (Or a b) = isSimpleC a && isSimpleC b
 isSimpleParts (Xor a b) = isSimpleC a && isSimpleC b
 isSimpleParts (Plus a b) = isSimpleC a && isSimpleC b
 
-generateRestrictedUpTo :: MonadLevel m => Int -> [String] -> (Int, Int) -> m ExpC -- allowed ops are passed as string list
-generateRestrictedUpTo n rst (alz, arz) = elements [1..n] >>= \i -> generateRestricted i rst (alz, arz)
+generateRestrictedUpTo :: MonadLevel m => Int -> [String] -> (Int, Int) -> Maybe Word64 -> m ExpC -- allowed ops are passed as string list
+generateRestrictedUpTo n rst (alz, arz) valueConstraint = elements [1..n] >>= \i -> generateRestricted i rst (alz, arz) valueConstraint
 
-generateRestricted :: MonadLevel m => Int -> [String] -> (Int, Int) -> m ExpC -- allowed ops are passed as string list
-generateRestricted n rst (alz, arz) = 
+generateRestricted :: MonadLevel m => Int -> [String] -> (Int, Int) -> Maybe Word64 -> m ExpC -- allowed ops are passed as string list
+generateRestricted n rst (alz, arz) valueConstraint = 
   generateRestricted' tfold n restriction
   where
     tfold = "tfold" `elem` rst
