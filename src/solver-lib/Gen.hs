@@ -236,12 +236,12 @@ generateRestricted' tfold n restriction =
       let opsOnlyRestriction = noRestriction {allowedOps = allowedOps restriction}
       let filledCache = let ?cache = M.empty
                         in M.fromList [((i, InFoldBody), [p | p@(e,f,_,_) <- serExp' i opsOnlyRestriction InFoldBody,
-                                                                             isSimpleC e, usesFold2Arg e, usesFold1Arg e])
+                                                                             isSimpleC e {-, usesFold2Arg e, usesFold1Arg e-} ])
                                       | i <- [cacheMin .. min n cacheMax]
                                       ]
       let ?cache = filledCache
       (e, _, _, _) <- serExp' n (restriction `removeOpRestriction` Fold_op) InFoldBody -- Fold should not be there, but remove it just in case
-      guard $ usesFold2Arg e && usesFold1Arg e -- since initial value for acc in tfold is known, bodies that use just acc are not interesting
+      -- guard $ usesFold2Arg e && usesFold1Arg e -- since initial value for acc in tfold is known, bodies that use just acc are not interesting
       return e
 
 
@@ -272,7 +272,7 @@ serExpression' n restriction = do
   let opsOnlyRestriction = noRestriction {allowedOps = allowedOps restriction}
   let ?tfold = False
   let filledCache = let ?cache = M.empty
-                    in M.fromList [((i, fs), [p | p@(e,f,_,_) <- (serExp' i opsOnlyRestriction fs), isSimpleC e, fs /= InFoldBody || usesFold2Arg e])
+                    in M.fromList [((i, fs), [p | p@(e,f,_,_) <- (serExp' i opsOnlyRestriction fs), isSimpleC e, fs /= InFoldBody || usesFold1Arg e || usesFold2Arg e])
                                   | i <- [cacheMin .. min n cacheMax],
                                     fs <- [NoFold, ExternalFold, InFoldBody]
                                    ]
@@ -359,7 +359,7 @@ serFold n restriction@(Restriction ops _ _) = level $ do
   sizeSeed <- elements [1..n - 3 - sizeArg]
   let sizeBody = n - 2 - sizeArg - sizeSeed
   (c, foldC, lzc, rzc) <- serExp' sizeBody restrictionBody InFoldBody
-  guard (usesFold2Arg c)
+  guard (usesFold1Arg c || usesFold2Arg c)
   -- TODO: is this really true that for tfold we could have ridiculous bodies that do not use foldAcc?
   (a, foldA, _, _) <- serExp' sizeArg restrictionArg ExternalFold
   (b, foldB, _, _) <- serExp' sizeSeed restrictionSeed ExternalFold
@@ -377,7 +377,7 @@ usesFold2Arg (ExpC _ e) = u e
     u MainArg = False
     u Fold1Arg = False
     u Fold2Arg = True
-    u (If a b c) = {- usesFold2Arg a || -} usesFold2Arg b || usesFold2Arg c -- if0 branches should refer to fold2Arg, otherwise they are as good as constant
+    u (If a b c) = usesFold2Arg a || usesFold2Arg b || usesFold2Arg c -- if0 branches or condition should refer to fold2Arg, otherwise they are as good as constant
     u (Fold a b c) = usesFold2Arg a || usesFold2Arg b || usesFold2Arg c -- should not happen, but still
     u (Not a) = usesFold2Arg a
     u (Shl1 a) = usesFold2Arg a
@@ -397,7 +397,7 @@ usesFold1Arg (ExpC _ e) = u e
     u MainArg = False
     u Fold1Arg = True
     u Fold2Arg = False
-    u (If a b c) = {- usesFold1Arg a || -} usesFold1Arg b || usesFold1Arg c -- if0 branches should refer to fold2Arg, otherwise they are as good as constant
+    u (If a b c) = usesFold1Arg a || usesFold1Arg b || usesFold1Arg c -- if0 branches or condition should refer to fold1Arg, otherwise they are as good as constant
     u (Fold a b c) = usesFold1Arg a || usesFold1Arg b || usesFold1Arg c -- should not happen, but still
     u (Not a) = usesFold1Arg a
     u (Shl1 a) = usesFold1Arg a
