@@ -1,6 +1,6 @@
 module Solve (solve, solveExact, isFeasible, solveWithTimeout) where
 
-import RandomBV (bvs)
+import RandomBV (bvs, goodRandoms)
 import Types
 import ServerAPI
 import HsClient (evalProgramById, guessProgram)
@@ -65,7 +65,14 @@ solve pId size operations = do
         Mismatch input expected actual -> do
           putStrLn $ "Mismatch on " ++ show input ++ " : " ++ show actual ++ " instead of " ++ show expected
           loop (input:inputs) (expected:outputs)
-        GuessError err -> error $ "guess error: " ++ err
+        GuessError err -> do
+          error $ "guess error: " ++ err
+          moreRandoms <- goodRandoms
+          evalRes <- evalProgramById pId moreRandoms
+          case evalRes of
+            EvalOK outputs2 -> loop (inputs++moreRandoms) (outputs++outputs2)
+            EvalError msg -> error $ "evalProgramById returned error:" ++ show msg
+
 
 onePos :: Word64 -> [Int]
 onePos x = [i | i <- [0..63], x .&. (1 `shiftL` i) /= 0]
