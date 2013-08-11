@@ -40,10 +40,9 @@ solveWithTimeout tmout pId size operations = do
       Just () -> putStrLn ">>> DONE"
       Nothing -> putStrLn $ ">>> TIMED OUT ON " ++ pId
 
-bonusSolve :: String -> Int -> [String] -> IO ()
-bonusSolve pId size operations = do
-  let cacheSize = 550000
-      numInputs = 3
+bonusSolve :: String -> Int -> Int ->[String] -> IO ()
+bonusSolve pId size cacheSize operations = do
+  let numInputs = 3
       inputs = take numInputs bvs
       cache = buildCaches inputs cacheSize
   print $ "Cache size: " ++ show cacheSize

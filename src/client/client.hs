@@ -28,7 +28,7 @@ data Cmd = MyProblems
          | Unsolved String
          | FindSolvable String Int
          | TrainSolve Int
-         | TrainBonusSolve Int
+         | TrainBonusSolve Int Int
          | Solve Int String String
          | Filter String String
          | SolveMany Int Int Int Bool Bool
@@ -78,11 +78,11 @@ run (TrainSolve size) = do
   print p
   solve (trainingId p) size (trainingOps p)
 
-run (TrainBonusSolve size) = do
+run (TrainBonusSolve size cacheSize) = do
   p <- HC.getTrainingProblem (Just size) Nothing
   let progId = (trainingId p)
   print p
-  bonusSolve (trainingId p) size (trainingOps p)
+  bonusSolve (trainingId p) size cacheSize (trainingOps p)
 
 run (Solve tmout fname id) = do
   problems <- FC.getUnsolvedHS fname
@@ -208,6 +208,7 @@ findSolvable = FindSolvable <$> argument str (metavar "FILE")
 trainSolve = TrainSolve <$> (read <$> argument str (metavar "SIZE"))
 
 trainBonusSolve = TrainBonusSolve <$> (read <$> argument str (metavar "SIZE"))
+                                  <*> (read <$> strOption (long "cache-size" <> help "cache size; 2000000 is ~30sec of populating the cache" <> value "200000"))
 
 lowLevelSolve = LowLevelSolve <$> argument str (metavar "ID")
                               <*> (read <$> argument str (metavar "SIZE"))
