@@ -19,7 +19,7 @@ basicSolve size operations inputs outputs = do
   let (alz, arz) = (minimum $ map numLeftZeros outputs, minimum $ map numRightZeros outputs)
   putStrLn ("RESTRICTION: allowed left/right zeros: " ++ show (alz, arz))
   let
-    programs = generateRestrictedUpTo size operations (alz, arz) (Just seedOutput)
+    programs = generateRestrictedUpTo size operations (alz, arz) False (Just seedOutput)
     candidates = filterProgs inputs outputs $ filterByCached seedOutput programs
   runPS candidates 4 (const False)
   where
@@ -96,7 +96,7 @@ isFeasible tmout p
   | problemSize p >= 16 = return Nothing
   | otherwise =
     timeout (tmout * 10^6) $ do
-      let gen = generateRestrictedUpTo (problemSize p) (operators p) (64, 64) Nothing
+      let gen = generateRestrictedUpTo (problemSize p) (operators p) (64, 64) False Nothing 
       let lgen = length gen
       evaluate lgen
       return ()
