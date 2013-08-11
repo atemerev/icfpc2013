@@ -300,16 +300,26 @@ serExp' n restriction fs = msum $ concat [
   map (\op -> serBinop n restriction fs op) (allowedBinaryOps restriction)]
 
 serIf :: (MonadLevel m, ?tfold :: Bool, ?cache :: Cache) => Int -> Restriction -> FoldState -> m (ExpC, Bool, Int, Int)
-serIf n restriction fs = do
+serIf n restriction@(Restriction ops alz arz) fs = do
   sizeA <- elements [1..n - 3]
-  (a, foldA, _, _) <- serExp' sizeA restriction fs
+  let opsOnly = noRestriction {allowedOps = ops}
+  let restrictionA = opsOnly
+  let restrictionB = opsOnly
+  (a, foldA, _, _) <- serExp' sizeA restrictionA fs
   if isConstExprC a
     then mzero
     else do
       sizeB <- elements [1..n - 2 - sizeA]
       let sizeC = n - 1 - sizeA - sizeB
-      (b, foldB, lzb, rzb) <- serExp' sizeB restriction (if foldA then ExternalFold else fs)
-      (c, foldC, lzc, rzc) <- serExp' sizeC restriction (if (foldA || foldB) then ExternalFold else fs)
+      (b, foldB, lzb, rzb) <- serExp' sizeB restrictionB (if foldA then ExternalFold else fs)
+      -- Respecting restriction "at most alz constant-zero bits allowed in if(..) b else c":
+      -- Assume b guarantees lzb left zero bits. If lzb <= alz, we're fine - no restriction on c.
+      -- If lzb > alz, propagate restriction to c.
+      let restrictionC = restriction {
+          allowedZeroLeftBits = if lzb <= alz then 64 else alz
+        , allowedZeroRightBits = if rzb <= arz then 64 else arz
+        }
+      (c, foldC, lzc, rzc) <- serExp' sizeC restrictionC (if (foldA || foldB) then ExternalFold else fs)
       let e = if0 a b c
       if isSimpleHead (expr e)
         then let (lze, rze) = leftRightZerosBinop lzb rzb lzc rzc (expr e)
@@ -317,15 +327,19 @@ serIf n restriction fs = do
         else mzero
 
 serFold :: (MonadLevel m, ?tfold :: Bool, ?cache :: Cache) => Int -> Restriction -> m (ExpC, Bool, Int, Int)
-serFold n restriction = level $ do
+serFold n restriction@(Restriction ops _ _) = level $ do
+  let opsOnly = noRestriction {allowedOps = ops}
+  let restrictionArg = opsOnly
+  let restrictionSeed = opsOnly
+  let restrictionBody = restriction
   sizeArg <- elements [1..n - 4]
   sizeSeed <- elements [1..n - 3 - sizeArg]
   let sizeBody = n - 2 - sizeArg - sizeSeed
-  (c, foldC, lzc, rzc) <- serExp' sizeBody restriction InFoldBody
+  (c, foldC, lzc, rzc) <- serExp' sizeBody restrictionBody InFoldBody
   guard (usesFold2Arg c)
   -- TODO: is this really true that for tfold we could have ridiculous bodies that do not use foldAcc?
-  (a, foldA, _, _) <- serExp' sizeArg restriction ExternalFold
-  (b, foldB, _, _) <- serExp' sizeSeed restriction ExternalFold
+  (a, foldA, _, _) <- serExp' sizeArg restrictionArg ExternalFold
+  (b, foldB, _, _) <- serExp' sizeSeed restrictionSeed ExternalFold
   let e = fold_ a b c
   if isSimpleHead (expr e)
     then let (lze, rze) = leftRightZerosUnop lzc rzc (expr e)
@@ -373,24 +387,31 @@ usesFold1Arg (ExpC _ e) = u e
     u (Plus a b) = usesFold1Arg a || usesFold1Arg b
 
 serUnop :: (MonadLevel m, ?tfold :: Bool, ?cache :: Cache) => Int -> Restriction -> FoldState -> (ExpC -> ExpC) -> m (ExpC, Bool, Int, Int)
-serUnop n restriction fs op = level $ do
-  (a, foldA, lza, rza) <- serExp' (n-1) restriction fs
+serUnop n restriction@(Restriction ops alz arz) fs op = level $ do
+  let opsOnly = noRestriction {allowedOps = ops}
+  let restrictionArg = opsOnly
+  -- TODO Properly propagate restriction
+  (a, foldA, lza, rza) <- serExp' (n-1) restrictionArg fs
   let e = op a
   if isSimpleHead (expr e)
     then let (lzu, rzu) = leftRightZerosUnop lza rza (expr e) in return (e, foldA, lzu, rzu)
     else mzero
 
 serBinop :: (MonadLevel m, ?tfold :: Bool, ?cache :: Cache) => Int -> Restriction -> FoldState -> (ExpC -> ExpC -> ExpC) -> m (ExpC, Bool, Int, Int)
-serBinop n restriction fs op = level $ do
+serBinop n restriction@(Restriction ops alz arz) fs op = level $ do
+  let opsOnly = noRestriction {allowedOps = ops}
+  let restrictionA = opsOnly
+  let restrictionB = opsOnly
+  -- TODO Properly propagate restriction
   sizeA <- elements [1..n - 2]
   let sizeB = n - 1 - sizeA
   -- Normal form: first operand must be smaller in size
   if sizeA > sizeB
     then mzero
     else do
-      (a, foldA, lza, rza) <- serExp' sizeA restriction fs
+      (a, foldA, lza, rza) <- serExp' sizeA restrictionA fs
       guard $ expr a /= Zero -- all binary ops (and, or, xor, plus) are stupid if first arg is zero
-      (b, foldB, lzb, rzb) <- serExp' sizeB restriction (if foldA then ExternalFold else fs)
+      (b, foldB, lzb, rzb) <- serExp' sizeB restrictionB (if foldA then ExternalFold else fs)
       let e = op a b
       if isSimpleHead (expr e)
         then let (lze, rze) = leftRightZerosBinop lza rza lzb rzb (expr e) in return (op a b, foldA || foldB, lze, rze)
