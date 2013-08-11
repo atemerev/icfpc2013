@@ -11,6 +11,7 @@ import ParSearch
 import Control.Exception
 import System.Timeout
 import Data.Bits
+import Data.List (findIndex)
 
 basicSolve :: Int -> [String] -> [Word64] -> [Word64] -> IO (Maybe ExpC)
 basicSolve size operations inputs outputs = do
@@ -18,8 +19,14 @@ basicSolve size operations inputs outputs = do
   putStrLn ("RESTRICTION: allowed left/right zeros: " ++ show (alz, arz))
   let
     programs = generateRestrictedUpTo size operations (alz, arz)
-    candidates = filterProgs inputs outputs $ filterByCached (head outputs) programs
+    candidates = filterProgs inputs outputs $ filterByCached seedOutput programs
   runPS candidates 4 (const False)
+  where
+    seed = head bvs
+    seedOutput = 
+      case findIndex (==seed) inputs of
+        Nothing -> error "No seed in inputs?!"
+        Just idx -> outputs!!idx
 
 solveWithTimeout :: Int -> String -> Int -> [String] -> IO ()
 solveWithTimeout tmout pId size operations = do
