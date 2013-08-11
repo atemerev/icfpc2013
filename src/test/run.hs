@@ -13,11 +13,15 @@ import Types
 import Gen
 import RandomBV (bvs)
 import Data.Maybe
+import Data.Bits
 
 main = defaultMain allTests
 
 allTests = testGroup "Tests"
   [ generatorTests, evalTests ]
+
+mask64 :: Word64
+mask64 = 0xFFFFFFFFFFFFFFFF
 
 generatorTests = localOption (SmallCheckDepth 8) $ testGroup "Generation"
   [ testProperty "Programs have correct size" $
@@ -37,6 +41,13 @@ generatorTests = localOption (SmallCheckDepth 8) $ testGroup "Generation"
       \n -> changeDepth (const n) $
         over (serProg noRestriction) $ \prog -> 
         fromMWord64 (error "no cached value in test") (cached prog) == eval (head bvs) undefined undefined prog
+  , testProperty "Left and right zero estimates for programs are correct" $
+      \n -> changeDepth (const (n-2)) $
+        over (serExpression' noRestriction) $ \(e, _, lz, rz) ->
+          over (generate (const bvs)) $ \v ->
+            let res = eval v undefined undefined e
+            in  (res .&. complement (mask64 `shiftL` rz) == 0 &&
+                 res .&. complement (mask64 `shiftR` lz) == 0)
   ]
 
 evalTests = testGroup "Evaluation" $

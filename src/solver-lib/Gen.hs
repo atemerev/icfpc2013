@@ -1,5 +1,5 @@
 {-# LANGUAGE ImplicitParams #-}
-module Gen (generateRestricted, generateRestrictedUpTo, serProg, noRestriction, restrictionFromList, OpName(..)) where
+module Gen (leftRightZerosUnop, leftRightZerosBinop, generateRestricted, generateRestrictedUpTo, serProg, serExpression', noRestriction, restrictionFromList, OpName(..)) where
 
 import Types
 import Test.SmallCheck
@@ -387,5 +387,5 @@ serBinop n restriction fs op = do
       (b, foldB, lzb, rzb) <- serExp' sizeB restriction (if foldA then ExternalFold else fs)
       let e = op a b
       if isSimpleHead (expr e)
-        then let (lze, rze) = leftRightZerosBinop lza lzb rza rzb (expr e) in return (op a b, foldA || foldB, lze, rze)
+        then let (lze, rze) = leftRightZerosBinop lza rza lzb rzb (expr e) in return (op a b, foldA || foldB, lze, rze)
         else mzero
