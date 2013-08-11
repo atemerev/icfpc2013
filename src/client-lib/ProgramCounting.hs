@@ -88,7 +88,7 @@ expand (AF n) | not (isFoldAllowed ?ctx) = expand (AFS n)
   [ [ op1 (AF $ n-1) | op1 <- allowedOp1 ?ctx ]
   , [ op2 (AF i) (AF j) | op2 <- allowedOp2 ?ctx, i <- [1..n-2], let j=n-1-i, j <= i ]
   , [ If0 (AF i) (AF j) (AF $ n-1-i-j) | isIfAllowed ?ctx, i <- [1..n-3], j <- [1..n-2-i] ]
-{-
+{- This causes duplicates, so it's rather useless
   , [ op2 (AF i) (AFS $ n-1-i) | op2 <- allowedOp2 ?ctx, i <- [1..n-2] ]
   , [ op2 (AFS i) (AF $ n-1-i) | op2 <- allowedOp2 ?ctx, i <- [1..n-2] ]
   , [ If0 (af1 i) (af2 j) (af3 $ n-1-i-j) | isIfAllowed ?ctx,
@@ -182,7 +182,7 @@ evalCtx x y z = ECtx { x = x, y = y, z = z }
 
 main = do
     n <- fmap (read.head) getArgs
-    let res = (topLevelExpands ?ctx) ! n
+    let res = (iterate (>>= expand) [AF n]) !! (n+1)
     print $ sum $ map (\f -> let ?ectx = evalCtx 0 0 0 in eval f) res
   where
     ?ctx = defaultContext
