@@ -2,34 +2,6 @@
   {
     "operators": [
       "if0",
-      "or",
-      "plus",
-      "shr1",
-      "shr16",
-      "shr4",
-      "xor"
-    ],
-    "id": "17E4pJpm9wP4AWNxQXGAt7LX",
-    "size": 26
-  },
-  {
-    "operators": [
-      "and",
-      "fold",
-      "if0",
-      "not",
-      "or",
-      "shl1",
-      "shr1",
-      "shr16",
-      "shr4"
-    ],
-    "id": "1Fu2f8YHijRmwFBBa1aPCddR",
-    "size": 26
-  },
-  {
-    "operators": [
-      "if0",
       "not",
       "or",
       "plus",
@@ -41,38 +13,6 @@
     ],
     "id": "1JchwhBXeNrlpV7wutjBOPv1",
     "size": 30
-  },
-  {
-    "timeLeft": 133.328,
-    "operators": [
-      "fold",
-      "if0",
-      "not",
-      "or",
-      "plus",
-      "shl1",
-      "shr16",
-      "shr4",
-      "xor"
-    ],
-    "id": "1PqNLSvkdWfSMAJ9jCmfSBOB",
-    "size": 30,
-    "solved": false
-  },
-  {
-    "operators": [
-      "and",
-      "if0",
-      "not",
-      "plus",
-      "shl1",
-      "shr1",
-      "shr4",
-      "tfold",
-      "xor"
-    ],
-    "id": "2kAYA20BwrBaFzmWXAA4BdYs",
-    "size": 28
   },
   {
     "operators": [
@@ -151,78 +91,6 @@
   {
     "operators": [
       "and",
-      "fold",
-      "if0",
-      "or",
-      "plus",
-      "shl1",
-      "shr1"
-    ],
-    "id": "7gMxVyKOn8Svr8RjVqtdF7rR",
-    "size": 27
-  },
-  {
-    "operators": [
-      "and",
-      "fold",
-      "if0",
-      "not",
-      "or",
-      "shl1",
-      "shr1",
-      "shr4",
-      "xor"
-    ],
-    "id": "8FswY5BAi4des3wGJPAGmxZm",
-    "size": 30
-  },
-  {
-    "operators": [
-      "and",
-      "if0",
-      "not",
-      "or",
-      "plus",
-      "shl1",
-      "shr16",
-      "shr4",
-      "tfold",
-      "xor"
-    ],
-    "id": "99JSFvKNyJ1HiGM4NubacIKW",
-    "size": 27
-  },
-  {
-    "operators": [
-      "fold",
-      "if0",
-      "not",
-      "or",
-      "plus",
-      "shr1",
-      "shr16",
-      "shr4",
-      "xor"
-    ],
-    "id": "A43WJAVkfSuJPjN22ATKb8Au",
-    "size": 30
-  },
-  {
-    "operators": [
-      "and",
-      "fold",
-      "if0",
-      "not",
-      "or",
-      "shr1",
-      "xor"
-    ],
-    "id": "AAU47KLo3KrtcMROfI0iOLok",
-    "size": 27
-  },
-  {
-    "operators": [
-      "and",
       "if0",
       "not",
       "or",
@@ -242,49 +110,6 @@
       "if0",
       "or",
       "plus",
-      "shl1",
-      "shr1",
-      "xor"
-    ],
-    "id": "AXHvejnBcKxempYmelIu4ATX",
-    "size": 29
-  },
-  {
-    "operators": [
-      "if0",
-      "not",
-      "or",
-      "plus",
-      "shl1",
-      "shr1",
-      "shr16",
-      "shr4",
-      "xor"
-    ],
-    "id": "Af7VNBUaYsK4idWwSovHRDNN",
-    "size": 25
-  },
-  {
-    "operators": [
-      "and",
-      "if0",
-      "not",
-      "or",
-      "plus",
-      "shl1",
-      "shr16",
-      "xor"
-    ],
-    "id": "AvwqwsPodpe2xykAKa7vzkA1",
-    "size": 27
-  },
-  {
-    "operators": [
-      "and",
-      "fold",
-      "if0",
-      "or",
-      "plus",
       "shr1",
       "shr16",
       "shr4",
@@ -292,51 +117,6 @@
     ],
     "id": "AzADEfF7572meliSioeTlaKV",
     "size": 30
-  },
-  {
-    "operators": [
-      "and",
-      "if0",
-      "not",
-      "plus",
-      "shl1",
-      "shr1",
-      "shr16",
-      "xor"
-    ],
-    "id": "B7MgtAIYR3EU8764p5R4qVbd",
-    "size": 29
-  },
-  {
-    "operators": [
-      "and",
-      "if0",
-      "not",
-      "or",
-      "plus",
-      "shl1",
-      "shr1",
-      "shr16",
-      "shr4",
-      "xor"
-    ],
-    "id": "BNcluEFA8E1Q8YAcmoaD96VY",
-    "size": 27
-  },
-  {
-    "operators": [
-      "and",
-      "if0",
-      "not",
-      "or",
-      "plus",
-      "shl1",
-      "shr1",
-      "tfold",
-      "xor"
-    ],
-    "id": "BhdSxdHiQFvEp6ru1aBNVE1d",
-    "size": 28
   },
   {
     "operators": [
@@ -352,20 +132,6 @@
     ],
     "id": "Bu0CaOKnwFG68DBzqsveGZV7",
     "size": 30
-  },
-  {
-    "operators": [
-      "if0",
-      "not",
-      "or",
-      "plus",
-      "shl1",
-      "shr1",
-      "shr16",
-      "xor"
-    ],
-    "id": "C9oUts20PuZWjt0zcSNd8CKh",
-    "size": 25
   },
   {
     "operators": [
@@ -399,36 +165,6 @@
     "size": 30
   },
   {
-    "timeLeft": 210.52100000000002,
-    "operators": [
-      "and",
-      "fold",
-      "if0",
-      "or",
-      "plus",
-      "shl1",
-      "shr1",
-      "shr4",
-      "xor"
-    ],
-    "id": "FrKxlGbWC1AJhTBljVQnzouI",
-    "size": 25,
-    "solved": false
-  },
-  {
-    "operators": [
-      "and",
-      "if0",
-      "not",
-      "or",
-      "plus",
-      "shr4",
-      "xor"
-    ],
-    "id": "FzS3sAaEqewyGqIn6utI8iTc",
-    "size": 27
-  },
-  {
     "operators": [
       "and",
       "fold",
@@ -457,66 +193,6 @@
     ],
     "id": "HAtym7oCbn0AYfEGisB0NrRB",
     "size": 29
-  },
-  {
-    "operators": [
-      "if0",
-      "not",
-      "or",
-      "plus",
-      "shl1",
-      "shr1",
-      "shr16",
-      "shr4",
-      "xor"
-    ],
-    "id": "HgSLok9Xx1fvpwAn6NCuOfzP",
-    "size": 25
-  },
-  {
-    "operators": [
-      "and",
-      "fold",
-      "if0",
-      "or",
-      "plus",
-      "shl1",
-      "shr1",
-      "xor"
-    ],
-    "id": "IDVxoCZhweeRXiWTpDD73eMs",
-    "size": 29
-  },
-  {
-    "operators": [
-      "and",
-      "fold",
-      "if0",
-      "or",
-      "plus",
-      "shl1",
-      "shr1",
-      "shr16",
-      "shr4",
-      "xor"
-    ],
-    "id": "IxzCoZMNhYtZfuTZZstKL0Wt",
-    "size": 27
-  },
-  {
-    "operators": [
-      "and",
-      "if0",
-      "not",
-      "or",
-      "shl1",
-      "shr1",
-      "shr16",
-      "shr4",
-      "xor"
-    ],
-    "id": "KA7HQHh8bAnIQwAG68NFdz2V",
-    "size": 24
   },
   {
     "operators": [
@@ -597,35 +273,6 @@
     "size": 30
   },
   {
-    "timeLeft": 247.008,
-    "operators": [
-      "and",
-      "fold",
-      "if0",
-      "not",
-      "plus",
-      "shr1",
-      "shr4"
-    ],
-    "id": "OW5bgCVuX5Q8iFzDfcuu4BcP",
-    "size": 29,
-    "solved": false
-  },
-  {
-    "operators": [
-      "and",
-      "if0",
-      "not",
-      "shl1",
-      "shr16",
-      "shr4",
-      "tfold",
-      "xor"
-    ],
-    "id": "OmIG1FyrPXWrEVY4KMBWuCWE",
-    "size": 30
-  },
-  {
     "operators": [
       "and",
       "if0",
@@ -673,63 +320,6 @@
   },
   {
     "operators": [
-      "fold",
-      "if0",
-      "not",
-      "or",
-      "shl1",
-      "shr1",
-      "shr16",
-      "shr4",
-      "xor"
-    ],
-    "id": "Qr0MMo2MCHflxFvpZ4B2HqXe",
-    "size": 26
-  },
-  {
-    "operators": [
-      "and",
-      "if0",
-      "not",
-      "plus",
-      "shl1",
-      "shr16",
-      "shr4",
-      "xor"
-    ],
-    "id": "Qs0tFALGEJRcwhX5dAAcpZYH",
-    "size": 25
-  },
-  {
-    "operators": [
-      "and",
-      "if0",
-      "or",
-      "plus",
-      "shr1",
-      "shr16",
-      "shr4"
-    ],
-    "id": "QvprccSpaUfIQuv3us0jv4t2",
-    "size": 29
-  },
-  {
-    "operators": [
-      "and",
-      "fold",
-      "if0",
-      "not",
-      "or",
-      "plus",
-      "shr1",
-      "shr4",
-      "xor"
-    ],
-    "id": "Rfr7RLayURTjtc7GPABUCG05",
-    "size": 25
-  },
-  {
-    "operators": [
       "and",
       "fold",
       "if0",
@@ -742,52 +332,6 @@
     ],
     "id": "RpL3NBrzLAit2s2Y07nnFpBg",
     "size": 29
-  },
-  {
-    "operators": [
-      "and",
-      "fold",
-      "if0",
-      "plus",
-      "shl1",
-      "shr1",
-      "shr16",
-      "shr4",
-      "xor"
-    ],
-    "id": "RxGjKVASA6iVPjDoBRVAiAjB",
-    "size": 30
-  },
-  {
-    "operators": [
-      "and",
-      "fold",
-      "if0",
-      "not",
-      "or",
-      "plus",
-      "shl1",
-      "shr1",
-      "shr16",
-      "xor"
-    ],
-    "id": "Sh48dmlwPpnxioSf0Hha2YYB",
-    "size": 28
-  },
-  {
-    "operators": [
-      "and",
-      "fold",
-      "if0",
-      "not",
-      "plus",
-      "shl1",
-      "shr1",
-      "shr16",
-      "xor"
-    ],
-    "id": "TN8qzLRuEB6yJ4RdPw16PQ9n",
-    "size": 30
   },
   {
     "operators": [
@@ -812,297 +356,11 @@
       "or",
       "plus",
       "shl1",
-      "shr1",
-      "shr16",
-      "shr4",
-      "xor"
-    ],
-    "id": "VLX2GEbnc0aAQ5d7CvUL82hK",
-    "size": 27
-  },
-  {
-    "operators": [
-      "if0",
-      "not",
-      "or",
-      "plus",
-      "shl1",
-      "shr1",
-      "shr4",
-      "xor"
-    ],
-    "id": "VSGv1SmNd9XzNqOlBKTRCzlA",
-    "size": 29
-  },
-  {
-    "operators": [
-      "and",
-      "fold",
-      "if0",
-      "or",
-      "plus",
-      "shl1",
-      "shr1",
-      "shr16",
-      "shr4"
-    ],
-    "id": "VhlatMCPCHA34AvkJs8M1gkn",
-    "size": 25
-  },
-  {
-    "operators": [
-      "and",
-      "if0",
-      "not",
-      "plus",
-      "shl1",
-      "shr1",
-      "shr16",
-      "shr4",
-      "xor"
-    ],
-    "id": "WcUraXT9HHQUWT0NXwfLw7B0",
-    "size": 24
-  },
-  {
-    "operators": [
-      "and",
-      "fold",
-      "if0",
-      "not",
-      "or",
-      "plus",
-      "shr16",
-      "xor"
-    ],
-    "id": "XDnYJSOEFmuCjtVtA3wbo9c2",
-    "size": 29
-  },
-  {
-    "operators": [
-      "and",
-      "if0",
-      "not",
-      "plus",
-      "shl1",
-      "shr1",
-      "shr16",
-      "shr4",
-      "xor"
-    ],
-    "id": "XNVLFc0gt5r1xAZA0nSLpEsS",
-    "size": 28
-  },
-  {
-    "operators": [
-      "and",
-      "if0",
-      "not",
-      "plus",
-      "shl1",
-      "shr16",
-      "shr4",
-      "xor"
-    ],
-    "id": "Z0EkPFzzMhrZOv5RAxuZO3PG",
-    "size": 29
-  },
-  {
-    "operators": [
-      "and",
-      "if0",
-      "not",
-      "or",
-      "plus",
-      "shl1",
-      "shr1",
-      "shr16",
-      "shr4",
-      "xor"
-    ],
-    "id": "Z9SeTpog0WS6tjSGAECxOfDe",
-    "size": 30
-  },
-  {
-    "operators": [
-      "and",
-      "if0",
-      "not",
-      "or",
-      "plus",
-      "shl1",
-      "shr1",
-      "shr16",
-      "shr4",
-      "xor"
-    ],
-    "id": "a2ryvLDhByXuBgjfsG4SSZ1Y",
-    "size": 30
-  },
-  {
-    "operators": [
-      "and",
-      "if0",
-      "not",
-      "or",
-      "plus",
-      "shl1",
       "shr4",
       "xor"
     ],
     "id": "a6QYo2Dzw6jum7roeT0pA8bk",
     "size": 30
-  },
-  {
-    "operators": [
-      "and",
-      "fold",
-      "if0",
-      "not",
-      "or",
-      "plus",
-      "shr1",
-      "shr16"
-    ],
-    "id": "abFprshmZBaCAYRYEyYIrt9h",
-    "size": 26
-  },
-  {
-    "operators": [
-      "and",
-      "if0",
-      "not",
-      "or",
-      "plus",
-      "shl1",
-      "shr1",
-      "shr4",
-      "xor"
-    ],
-    "id": "bF22jOjs89GFc08G18W9vtIX",
-    "size": 27
-  },
-  {
-    "operators": [
-      "and",
-      "if0",
-      "or",
-      "plus",
-      "shr1",
-      "shr4",
-      "tfold",
-      "xor"
-    ],
-    "id": "cS17LAqnsNBymnJfGpXHqmJi",
-    "size": 29
-  },
-  {
-    "operators": [
-      "and",
-      "if0",
-      "plus",
-      "shl1",
-      "shr1",
-      "shr16",
-      "xor"
-    ],
-    "id": "cmRVFANjrDb5nBZT0JmTaicY",
-    "size": 26
-  },
-  {
-    "operators": [
-      "and",
-      "if0",
-      "not",
-      "or",
-      "plus",
-      "shl1",
-      "shr1",
-      "shr16",
-      "shr4",
-      "xor"
-    ],
-    "id": "d5ysy0I4OFqDYZI7t77xNrOP",
-    "size": 27
-  },
-  {
-    "operators": [
-      "and",
-      "fold",
-      "if0",
-      "not",
-      "plus",
-      "shl1",
-      "shr1",
-      "shr16",
-      "shr4",
-      "xor"
-    ],
-    "id": "dKxCysgrxDLhehNxlWHEUOiX",
-    "size": 30
-  },
-  {
-    "timeLeft": 65.37899999999999,
-    "operators": [
-      "and",
-      "if0",
-      "not",
-      "or",
-      "plus",
-      "shl1",
-      "shr1",
-      "shr4",
-      "tfold"
-    ],
-    "id": "dcpQxY0uuSk5HfUGA3qygy3S",
-    "size": 29,
-    "solved": false
-  },
-  {
-    "operators": [
-      "and",
-      "if0",
-      "not",
-      "or",
-      "plus",
-      "shl1",
-      "shr1",
-      "tfold",
-      "xor"
-    ],
-    "id": "dkVWhHF4RSjavITPddzNTa3e",
-    "size": 28
-  },
-  {
-    "operators": [
-      "and",
-      "if0",
-      "not",
-      "plus",
-      "shl1",
-      "shr16",
-      "shr4",
-      "xor"
-    ],
-    "id": "e2ci6RKRvRbDHBqWW88ES8Os",
-    "size": 29
-  },
-  {
-    "timeLeft": 110.04599999999999,
-    "operators": [
-      "fold",
-      "if0",
-      "not",
-      "plus",
-      "shl1",
-      "shr1",
-      "shr16",
-      "shr4",
-      "xor"
-    ],
-    "id": "f0z6P3TFu3961z7UNPEeYB0e",
-    "size": 28,
-    "solved": false
   },
   {
     "operators": [
@@ -1117,21 +375,6 @@
     ],
     "id": "fRcDF3AgUB7kA6E82ST3uNif",
     "size": 30
-  },
-  {
-    "operators": [
-      "and",
-      "if0",
-      "not",
-      "or",
-      "shl1",
-      "shr1",
-      "shr16",
-      "shr4",
-      "xor"
-    ],
-    "id": "hI8SlTqzBUP4UPCTmBwgAueG",
-    "size": 28
   },
   {
     "operators": [
@@ -1182,38 +425,6 @@
   {
     "operators": [
       "and",
-      "if0",
-      "not",
-      "or",
-      "plus",
-      "shl1",
-      "shr16",
-      "shr4",
-      "xor"
-    ],
-    "id": "hwob93ylVpxWBAg2QLRJ2Qj4",
-    "size": 27
-  },
-  {
-    "timeLeft": 46.486999999999995,
-    "operators": [
-      "fold",
-      "if0",
-      "not",
-      "or",
-      "plus",
-      "shl1",
-      "shr1",
-      "shr16",
-      "xor"
-    ],
-    "id": "ifAEJBAWEoeJymU4jKuGKA9W",
-    "size": 26,
-    "solved": false
-  },
-  {
-    "operators": [
-      "and",
       "fold",
       "if0",
       "plus",
@@ -1227,6 +438,7 @@
     "size": 29
   },
   {
+    "timeLeft": 250.954,
     "operators": [
       "and",
       "fold",
@@ -1239,66 +451,8 @@
       "xor"
     ],
     "id": "jK15TVjo4igUksp9672nvsrK",
-    "size": 29
-  },
-  {
-    "operators": [
-      "and",
-      "if0",
-      "or",
-      "plus",
-      "shl1",
-      "shr1",
-      "shr4",
-      "tfold",
-      "xor"
-    ],
-    "id": "jSOEQZb0njSJcP0lWnIGQlDH",
-    "size": 28
-  },
-  {
-    "operators": [
-      "and",
-      "if0",
-      "or",
-      "shl1",
-      "shr1",
-      "shr16",
-      "tfold",
-      "xor"
-    ],
-    "id": "kcuEGUKnMrd9bcalSqdSP7b8",
-    "size": 29
-  },
-  {
-    "operators": [
-      "and",
-      "fold",
-      "if0",
-      "not",
-      "or",
-      "plus",
-      "shl1",
-      "shr1",
-      "shr16",
-      "xor"
-    ],
-    "id": "kdmiAaKBWMHIdGck1PfU5BG6",
-    "size": 28
-  },
-  {
-    "operators": [
-      "if0",
-      "not",
-      "or",
-      "plus",
-      "shl1",
-      "shr1",
-      "shr16",
-      "shr4"
-    ],
-    "id": "lyJTzupQTPHFrRSXYfiB4NJK",
-    "size": 26
+    "size": 29,
+    "solved": false
   },
   {
     "operators": [
@@ -1332,36 +486,6 @@
   },
   {
     "operators": [
-      "and",
-      "fold",
-      "if0",
-      "not",
-      "shl1",
-      "shr1",
-      "shr16",
-      "shr4",
-      "xor"
-    ],
-    "id": "nkXrw6KIWw11vFvbirIxFwVm",
-    "size": 28
-  },
-  {
-    "operators": [
-      "and",
-      "if0",
-      "not",
-      "or",
-      "plus",
-      "shl1",
-      "shr1",
-      "shr4",
-      "xor"
-    ],
-    "id": "oCHoBAzAPCikcxFZGeoviB9o",
-    "size": 29
-  },
-  {
-    "operators": [
       "fold",
       "if0",
       "not",
@@ -1377,6 +501,7 @@
     "size": 28
   },
   {
+    "timeLeft": 269.77,
     "operators": [
       "and",
       "if0",
@@ -1389,54 +514,8 @@
       "xor"
     ],
     "id": "ppDqMFAu15fxAldwWbIMaHBv",
-    "size": 29
-  },
-  {
-    "operators": [
-      "and",
-      "fold",
-      "if0",
-      "not",
-      "or",
-      "plus",
-      "shl1",
-      "shr1",
-      "shr16",
-      "shr4",
-      "xor"
-    ],
-    "id": "qFY4qXjdJECevVCI2BdtvuYD",
-    "size": 26
-  },
-  {
-    "operators": [
-      "fold",
-      "if0",
-      "or",
-      "plus",
-      "shl1",
-      "shr1",
-      "shr16",
-      "shr4",
-      "xor"
-    ],
-    "id": "qwxhNNQsGwYhaAVUppjBXTOa",
-    "size": 30
-  },
-  {
-    "operators": [
-      "and",
-      "if0",
-      "not",
-      "or",
-      "plus",
-      "shl1",
-      "shr1",
-      "shr16",
-      "shr4"
-    ],
-    "id": "rBXFBIT2q1eEoWiBLLXwmWYx",
-    "size": 28
+    "size": 29,
+    "solved": false
   },
   {
     "operators": [
@@ -1484,80 +563,7 @@
     "size": 30
   },
   {
-    "operators": [
-      "and",
-      "fold",
-      "if0",
-      "not",
-      "plus",
-      "shl1",
-      "shr1",
-      "shr16",
-      "xor"
-    ],
-    "id": "sxB33ZVQu5RpW13W20eimPZL",
-    "size": 26
-  },
-  {
-    "operators": [
-      "fold",
-      "if0",
-      "not",
-      "or",
-      "plus",
-      "shl1",
-      "shr1",
-      "shr16",
-      "shr4"
-    ],
-    "id": "tNAPEqqAsddruL1fcBAiZ64V",
-    "size": 27
-  },
-  {
-    "operators": [
-      "and",
-      "fold",
-      "if0",
-      "not",
-      "or",
-      "plus",
-      "shl1",
-      "shr1",
-      "shr16",
-      "xor"
-    ],
-    "id": "tlJdfmCwaoX7T1B1KtYvI4TF",
-    "size": 28
-  },
-  {
-    "operators": [
-      "if0",
-      "not",
-      "plus",
-      "shl1",
-      "shr1",
-      "shr16",
-      "shr4",
-      "xor"
-    ],
-    "id": "uOkW9chOQ5zT0dh4eBwvFyxi",
-    "size": 26
-  },
-  {
-    "operators": [
-      "and",
-      "fold",
-      "if0",
-      "or",
-      "plus",
-      "shl1",
-      "shr1",
-      "xor"
-    ],
-    "id": "uz6gIOu6GqcEln9XcLpMf2YV",
-    "size": 26
-  },
-  {
+    "timeLeft": 150.627,
     "operators": [
       "and",
       "if0",
@@ -1570,38 +576,8 @@
       "xor"
     ],
     "id": "vFV7h7PALOo8wSreCyqobL7p",
-    "size": 28
-  },
-  {
-    "operators": [
-      "and",
-      "fold",
-      "if0",
-      "not",
-      "or",
-      "plus",
-      "shl1",
-      "shr16",
-      "shr4",
-      "xor"
-    ],
-    "id": "vMQ5g4O9v2HL7GgGw0WyFRkK",
-    "size": 28
-  },
-  {
-    "operators": [
-      "and",
-      "fold",
-      "if0",
-      "not",
-      "or",
-      "plus",
-      "shr1",
-      "shr16",
-      "xor"
-    ],
-    "id": "vPfMVfh0TIrqflaDi6xytK6W",
-    "size": 25
+    "size": 28,
+    "solved": false
   },
   {
     "operators": [
@@ -1621,19 +597,6 @@
   },
   {
     "operators": [
-      "if0",
-      "or",
-      "plus",
-      "shl1",
-      "shr1",
-      "shr16",
-      "xor"
-    ],
-    "id": "wgf2ZA3oSZb0gMlLdzBM2Q7k",
-    "size": 29
-  },
-  {
-    "operators": [
       "and",
       "fold",
       "if0",
@@ -1649,22 +612,7 @@
     "size": 30
   },
   {
-    "operators": [
-      "and",
-      "fold",
-      "if0",
-      "not",
-      "or",
-      "plus",
-      "shl1",
-      "shr16",
-      "shr4",
-      "xor"
-    ],
-    "id": "x13ALFH1pjplF5ogMICn02oF",
-    "size": 28
-  },
-  {
+    "timeLeft": 20.536999999999978,
     "operators": [
       "fold",
       "if0",
@@ -1677,6 +625,7 @@
       "xor"
     ],
     "id": "yulWipREm34oCY37SPXWFYVZ",
-    "size": 30
+    "size": 30,
+    "solved": false
   }
 ]
