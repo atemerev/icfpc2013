@@ -11,7 +11,7 @@ import Data.List (isInfixOf, intercalate, find, sortBy)
 import Data.Ord (comparing)
 import Text.Printf
 import System.IO
-import Solve (solve, isFeasible, solve', solveExact)
+import Solve (solve, isFeasible, solveExact)
 import PP (ppProg)
 import Data.Word
 import Filter
@@ -95,7 +95,7 @@ run (SolveMany offset limit tmout) = do
       res <- isFeasible tmout p
       _ <- case res of  
         Nothing -> putStrLn ("  skipping " ++ problemId p ++ " - timed out")
-        Just () -> solve' (problemId p) (generateRestricted (problemSize p) (operators p) (64, 64))
+        Just () -> solve (problemId p) (problemSize p) (operators p)
       trySolve ps
 
 run (FilterCached size ops expected) = mapM_ (putStrLn.ppProg) $ filterByCached expected $ generateRestrictedUpTo size ops (64, 64)
