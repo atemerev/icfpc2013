@@ -446,7 +446,7 @@ serIf bonus n restriction_orig@(Restriction ops alz arz) fs unknownParityOnly va
   let (a_lo, a_hi) = 
         if bonus then if n < 30 then ((n-3) `div` 3,(n-3) `div` 3 + 2) else ((n-3)`div` 4,(n-3)`div`4 + 2)
         else (1,n-3)
-  sizeA_ <- elements [a_lo, a_hi]
+  sizeA_ <- elements [a_lo .. a_hi]
   guard $ (bonus == False || sizeA_ >= (n-2) `div` 4 - 2)
   let opsOnly = noRestriction {allowedOps = ops}
   let restrictionA = opsOnly
