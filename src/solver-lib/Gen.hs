@@ -201,7 +201,9 @@ isSimpleParts (Xor a b) = isSimpleC a && isSimpleC b
 isSimpleParts (Plus a b) = isSimpleC a && isSimpleC b
 
 generateRestrictedUpTo :: MonadLevel m => Int -> [String] -> (Int, Int) -> m ExpC -- allowed ops are passed as string list
-generateRestrictedUpTo n rst (alz, arz) = elements [1..n] >>= \i -> generateRestricted i rst (alz, arz)
+generateRestrictedUpTo n rst (alz, arz) = 
+  let lower_bound = if "bonus" `elem` rst then n else 1
+   in elements [lower_bound..n] >>= \i -> generateRestricted i rst (alz, arz)
 
 generateRestricted :: MonadLevel m => Int -> [String] -> (Int, Int) -> m ExpC -- allowed ops are passed as string list
 generateRestricted n rst (alz, arz) = 
@@ -345,7 +347,7 @@ serIf :: (MonadLevel m, ?tfold :: Bool, ?cache :: Cache) => Bool -> Int -> Restr
 -- "bonus" controls if we are generating this special "if"
 serIf bonus n restriction_orig@(Restriction ops alz arz) fs = do
   let restriction@(Restriction ops alz arz) = 
-        if bonus then restriction_orig `removeOpRestriction` If_op
+        if (traceShow bonus bonus) then restriction_orig `removeOpRestriction` If_op
         else restriction_orig
   let (a_lo, a_hi) = 
         if bonus then if n < 30 then (5,9) else (9,15)
