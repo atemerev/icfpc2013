@@ -34,7 +34,7 @@ runPS
   -> (Int -> Bool) -- on which levels do we parallelize?
   -> IO (Maybe a)
 runPS ps threads pp = do
-  sem <- atomically $ newTVar threads
+  sem <- atomically $ newTVar (threads - 1) -- -1 for the main thread
   searchIO $ runReaderT (unPS ps) (PSEnv 1 pp sem)
 
 instance MonadLevel (PS r) where
@@ -82,18 +82,15 @@ searchIOBounded sem a sk fk = withSemaphore sem $
   evaluate =<< runLogicT a sk fk
 
 withSemaphore sem a =
-  bracket_ acquire release a
-  where
-    acquire = atomically $ do
-      caps <- readTVar sem
-      if caps > 0
-        then
-          writeTVar sem (caps - 1)
-        else retry
-    release = atomically $ modifyTVar' sem (+1)
+  bracket_ (acquire sem) (release sem) a
 
 yieldSemaphore sem a =
-  bracket_ release acquire a
-  where
-    acquire = atomically $ modifyTVar' sem (subtract 1)
-    release = atomically $ modifyTVar' sem (+1)
+  bracket_ (release sem) (acquire sem) a
+
+acquire sem = atomically $ do
+  caps <- readTVar sem
+  if caps > 0
+    then
+      writeTVar sem (caps - 1)
+    else retry
+release sem = atomically $ modifyTVar' sem (+1)
