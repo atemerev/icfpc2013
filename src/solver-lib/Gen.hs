@@ -65,6 +65,17 @@ allowed restriction op = hasRestriction restriction (restrictionFromOp op)
 allow restriction opName f =
   if allowed restriction opName then Just f else Nothing
 
+allowUnary restriction opName f =
+  if allowedUnary restriction opName then Just f else Nothing
+
+allowedUnary r@(Restriction _ lnz rnz) opName = allowed r opName && case opName of {
+    Shl1_op -> rnz < 1
+  ; Shr1_op -> lnz < 1
+  ; Shr4_op -> lnz < 4
+  ; Shr16_op -> lnz < 16
+  ; _ -> True
+  }
+
 restrictionFromOp :: OpName -> Restriction
 restrictionFromOp op = noRestriction { allowedOps = restrictionMaskFromOp op }
 
@@ -214,7 +225,7 @@ generateRestricted' tfold n restriction =
 
 allowedUnaryOps :: Restriction -> [ExpC -> ExpC]
 allowedUnaryOps r = 
-  catMaybes [ allow r op f | (op,f) <- [(Not_op, not_), (Shl1_op, shl1), (Shr1_op, shr1), (Shr4_op, shr4), (Shr16_op, shr16)]]
+  catMaybes [ allowUnary r op f | (op,f) <- [(Not_op, not_), (Shl1_op, shl1), (Shr1_op, shr1), (Shr4_op, shr4), (Shr16_op, shr16)]]
 
 allowedBinaryOps :: Restriction -> [ExpC -> ExpC -> ExpC]
 allowedBinaryOps r = 
