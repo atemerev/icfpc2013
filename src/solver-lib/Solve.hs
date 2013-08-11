@@ -20,7 +20,7 @@ basicSolve size operations inputs outputs = do
   let
     programs = generateRestrictedUpTo size operations (alz, arz)
     candidates = filterProgs inputs outputs $ filterByCached seedOutput programs
-  runPS candidates 4 (const False)
+  runPS candidates 4 (== 1)
   where
     seed = head bvs
     seedOutput = 
