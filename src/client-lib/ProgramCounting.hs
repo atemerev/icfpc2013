@@ -1,6 +1,17 @@
 {-# LANGUAGE ImplicitParams #-}
 module ProgramCounting (
-  main
+  main,
+  countTag,
+  expandTag,
+  Context,
+  newContext,
+  defaultContext, -- ^ all operations allowed
+  defaultAllowedOp1,
+  defaultAllowedOp2,
+  EvalContext,
+  evalCtx,
+  eval,
+  expectedComplexity
 ) where
 import System.Environment (getArgs)
 
@@ -27,6 +38,7 @@ data Tag = UF D | AFS D | AF D | TF D
 isLeaf :: Tag -> Bool
 isLeaf tag = tag `elem` [C0,C1,X,Y,Z]
 
+-- Use newContext to construct this!
 data Context = Ctx { allowedOp1 :: [AllowedOp1]
                    , allowedOp2 :: [AllowedOp2]
                    , isIfAllowed :: !Bool
@@ -57,40 +69,40 @@ newContext allowedOp1 allowedOp2 isIfAllowed isFoldAllowed =
                  , allowedOp2 = allowedOp2
                  , isIfAllowed = isIfAllowed
                  , isFoldAllowed = isFoldAllowed
-                 , inFoldExprExpands = listArray (1,size) [ expand (UF n) | n <- [1..size] ]
-                 , topLevelNoFoldExpands = listArray (1,size) [ expand (AFS n) | n <- [1..size] ]
-                 , topLevelExpands = listArray (1,size) [ expand (AF n) | n <- [1..size] ]
-                 , inTFoldExprExpands = listArray (1,size) [ expand (TF n) | n <- [1..size] ]
+                 , inFoldExprExpands = listArray (1,size) [ expandTag (UF n) | n <- [1..size] ]
+                 , topLevelNoFoldExpands = listArray (1,size) [ expandTag (AFS n) | n <- [1..size] ]
+                 , topLevelExpands = listArray (1,size) [ expandTag (AF n) | n <- [1..size] ]
+                 , inTFoldExprExpands = listArray (1,size) [ expandTag (TF n) | n <- [1..size] ]
                  , inFoldExprCounts = amap (\expands -> sum $ map countTag expands) (inFoldExprExpands ctx)
                  , topLevelNoFoldCounts = amap (\expands -> sum $ map countTag expands) (topLevelNoFoldExpands ctx)
                  , topLevelCounts = amap (\expands -> sum $ map countTag expands) (topLevelExpands ctx)
                  , inTFoldExprCounts = amap (\expands -> sum $ map countTag expands) (inTFoldExprExpands ctx)
                  }) in ctx
 
-expand :: (?ctx :: Context) => Tag -> [Tag]
-expand (UF 1) = [C0, C1, X, Y, Z]
-expand (UF n) = concat
+expandTag :: (?ctx :: Context) => Tag -> [Tag]
+expandTag (UF 1) = [C0, C1, X, Y, Z]
+expandTag (UF n) = concat
   [ [ op1 (UF $ n-1) | op1 <- allowedOp1 ?ctx ]
   , [ op2 (UF i) (UF j) | op2 <- allowedOp2 ?ctx, i <- [1..n-2], let j = n-1-i, j <= i ]
   , [ If0 (UF i) (UF j) (UF $ n-1-i-j) | isIfAllowed ?ctx, i <- [1..n-3], j <- [1..n-2-i] ]
   ]
 
-expand (AFS 1) = [C0, C1, X]
-expand (AFS n) = concat
+expandTag (AFS 1) = [C0, C1, X]
+expandTag (AFS n) = concat
   [ [ op1 (AFS $ n-1) | op1 <- allowedOp1 ?ctx ]
   , [ op2 (AFS i) (AFS j) | op2 <- allowedOp2 ?ctx, i <- [1..n-2], let j=n-1-i, j <= i ]
   , [ If0 (AFS i) (AFS j) (AFS $ n-1-i-j) | isIfAllowed ?ctx, i <- [1..n-3], j <- [1..n-2-i] ]
   ]
 
-expand af@(AF n) | isFoldAllowed ?ctx = expand' af
-                 | otherwise = expand (AFS n)
+expandTag af@(AF n) | isFoldAllowed ?ctx = expandTag' af
+                    | otherwise = expandTag (AFS n)
   where
-    expand' :: (?ctx :: Context) => Tag -> [Tag]
-    expand' (AF 1) = []
-    expand' (AF 2) = []
-    expand' (AF 3) = []
-    expand' (AF 4) = []
-    expand' (AF n) = concat
+    expandTag' :: (?ctx :: Context) => Tag -> [Tag]
+    expandTag' (AF 1) = []
+    expandTag' (AF 2) = []
+    expandTag' (AF 3) = []
+    expandTag' (AF 4) = []
+    expandTag' (AF n) = concat
       [ [ op1 (AF $ n-1) | op1 <- allowedOp1 ?ctx ]
       , [ op2 (AF i) (AFS j) | op2 <- allowedOp2 ?ctx, i <- [1..n-2], let j=n-1-i, i >= 5 ]
       , [ If0 (AF i) (AFS j) (AFS k) | isIfAllowed ?ctx, i <- [1..n-3], j <- [1..n-2-i], let k=n-1-i-j, i >= 5 ]
@@ -99,29 +111,29 @@ expand af@(AF n) | isFoldAllowed ?ctx = expand' af
       , [ Fold (AFS i) (AFS j) (UF k) | i <- [1..n-4], j <- [1..n-3-i], let k=n-2-i-j ]
       ]
 
-expand (TF 1) = [C0, C1, Y, Z]   -- can't use X!
-expand (TF n) = concat
+expandTag (TF 1) = [C0, C1, Y, Z]   -- can't use X!
+expandTag (TF n) = concat
   [ [ op1 (TF $ n-1) | op1 <- allowedOp1 ?ctx ]
   , [ op2 (TF i) (TF j) | op2 <- allowedOp2 ?ctx, i <- [1..n-2], let j=n-1-i, j <= i ]
   , [ If0 (TF i) (TF j) (TF $ n-1-i-j) | isIfAllowed ?ctx, i <- [1..n-3], j <- [1..n-2-i] ]
   ]
 
-expand C0 = [C0]
-expand C1 = [C1]
-expand X = [X]
-expand Y = [Y]
-expand Z = [Z]
-expand (Not tag) = map Not (expand tag)
-expand (Shl1 tag) = map Shl1 (expand tag)
-expand (Shr1 tag) = map Shr1 (expand tag)
-expand (Shr4 tag) = map Shr4 (expand tag)
-expand (Shr16 tag) = map Shr16 (expand tag)
-expand (And tag1 tag2) = [ And a b | a <- expand tag1, b <- expand tag2 ]
-expand (Or tag1 tag2) = [ Or a b | a <- expand tag1, b <- expand tag2 ]
-expand (Xor tag1 tag2) = [ Xor a b | a <- expand tag1, b <- expand tag2 ]
-expand (Plus tag1 tag2) = [ Plus a b | a <- expand tag1, b <- expand tag2 ]
-expand (If0 tag1 tag2 tag3) = [ If0 a b c | a <- expand tag1, b <- expand tag2, c <- expand tag3 ]
-expand (Fold tag1 tag2 tag3) = [ Fold a b c | a <- expand tag1, b <- expand tag2, c <- expand tag3 ]
+expandTag C0 = [C0]
+expandTag C1 = [C1]
+expandTag X = [X]
+expandTag Y = [Y]
+expandTag Z = [Z]
+expandTag (Not tag) = map Not (expandTag tag)
+expandTag (Shl1 tag) = map Shl1 (expandTag tag)
+expandTag (Shr1 tag) = map Shr1 (expandTag tag)
+expandTag (Shr4 tag) = map Shr4 (expandTag tag)
+expandTag (Shr16 tag) = map Shr16 (expandTag tag)
+expandTag (And tag1 tag2) = [ And a b | a <- expandTag tag1, b <- expandTag tag2 ]
+expandTag (Or tag1 tag2) = [ Or a b | a <- expandTag tag1, b <- expandTag tag2 ]
+expandTag (Xor tag1 tag2) = [ Xor a b | a <- expandTag tag1, b <- expandTag tag2 ]
+expandTag (Plus tag1 tag2) = [ Plus a b | a <- expandTag tag1, b <- expandTag tag2 ]
+expandTag (If0 tag1 tag2 tag3) = [ If0 a b c | a <- expandTag tag1, b <- expandTag tag2, c <- expandTag tag3 ]
+expandTag (Fold tag1 tag2 tag3) = [ Fold a b c | a <- expandTag tag1, b <- expandTag tag2, c <- expandTag tag3 ]
 
 countTag :: (?ctx :: Context) => Tag -> Integer
 countTag C0 = 1
@@ -181,9 +193,36 @@ eval (Fold tag1 tag2 tag3) = foldr foldOp seed [b1, b2, b3, b4, b5, b6, b7, b8]
 evalCtx :: Word64 -> Word64 -> Word64 -> EvalContext
 evalCtx x y z = ECtx { x = x, y = y, z = z }
 
+-- | Give the expected complexity score (how many possible functions exist, given the restrictions).
+-- Example:
+-- > expectedComplexity (words "not shl1 shr1 shr4 shr16 and or xor plus if0 fold tfold") 16
+expectedComplexity :: [String] -> Int -> Integer
+expectedComplexity operations size = let ?ctx = newContext op1 op2 ifOk foldOk in
+                                       sum (map countTag tags)
+  where
+    tags | isTFold = [ TF i | i <- [1..size-4] ]
+         | otherwise = [ AF i | i <- [1..size] ]
+    addOp :: String -> a -> [a] -> [a]
+    addOp op v vs | op `elem` operations = v:vs
+                  | otherwise = vs
+    op1 = addOp "not" Not $
+          addOp "shl1" Shl1 $
+          addOp "shr1" Shr1 $
+          addOp "shr4" Shr4 $
+          addOp "shr16" Shr16 $
+          []
+    op2 = addOp "and" And $
+          addOp "or" Or $
+          addOp "xor" Xor $
+          addOp "plus" Plus $
+          []
+    ifOk = "if0" `elem` operations
+    foldOk = "fold" `elem` operations
+    isTFold = "tfold" `elem` operations
+
 main = do
     n <- fmap (read.head) getArgs
-    let res = (iterate (>>= expand) [AF n]) !! (n+1)
+    let res = (iterate (>>= expandTag) [AF n]) !! (n+1)
     print $ sum $ map (\f -> let ?ectx = evalCtx 0 0 0 in eval f) res
   where
     ?ctx = defaultContext
