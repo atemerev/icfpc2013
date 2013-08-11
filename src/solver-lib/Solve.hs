@@ -19,7 +19,7 @@ basicSolve size operations inputs outputs = do
   let
     programs = generateRestrictedUpTo size operations (alz, arz)
     candidates = filterProgs inputs outputs $ filterByCached (head outputs) programs
-  runPS candidates 4 (<= 3)
+  runPS candidates 4 (const False)
 
 solve :: String -> Int -> [String] -> IO ()
 solve pId size operations = do
