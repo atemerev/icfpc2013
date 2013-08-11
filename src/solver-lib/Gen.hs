@@ -162,7 +162,7 @@ isSimpleHead (Shr16 a) = True
 
 isSimpleHead (And (ExpC _ Zero) b) = False
 isSimpleHead (And a (ExpC _ Zero)) = False
--- Normal form: first operand must be smaller in size
+-- Normal form: first operand must be smaller in size 
 isSimpleHead (And a b) | expCSize a > expCSize b || a >= b = False
 isSimpleHead (And a b) = True
 
@@ -178,7 +178,7 @@ isSimpleHead (Xor a b) = True
 
 isSimpleHead (Plus (ExpC _ Zero) b) = False
 isSimpleHead (Plus a (ExpC _ Zero)) = False
-isSimpleHead (Plus a b) | expCSize a > expCSize b || a >= b = False
+isSimpleHead (Plus a b) | expCSize a > expCSize b || a > b = False  -- a>b, not a>=b to allow (plus x x)
 isSimpleHead (Plus a b) = True
 
 isSimpleParts Zero = True
