@@ -347,7 +347,7 @@ serIf :: (MonadLevel m, ?tfold :: Bool, ?cache :: Cache) => Bool -> Int -> Restr
 -- "bonus" controls if we are generating this special "if"
 serIf bonus n restriction_orig@(Restriction ops alz arz) fs = do
   let restriction@(Restriction ops alz arz) = 
-        if (traceShow bonus bonus) then restriction_orig `removeOpRestriction` If_op
+        if bonus then restriction_orig `removeOpRestriction` If_op
         else restriction_orig
   let (a_lo, a_hi) = 
         if bonus then if n < 30 then (5,9) else (9,15)
