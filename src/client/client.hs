@@ -6,6 +6,7 @@ import ServerAPI (OpLimit(..),Problem(..), TrainingResponse(..))
 import StringClient as SC (getMyproblems, getStatus, getTrainingProblem, evalProgram, evalProgramById, guessProgram)
 import FileClient as FC (getUnsolved, getUnsolvedHS, filterByIds)
 import HsClient as HC (getTrainingProblem, getUnsolved)
+import ProgramCounting as PC (expectedComplexity)
 import Gen
 import Data.List (isInfixOf, intercalate, find, sortBy)
 import Data.Ord (comparing)
@@ -31,6 +32,7 @@ data Cmd = MyProblems
          | LowLevelSolve String Int [String]
          | SolveExact Int [String] ([Word64], [Word64])
          | FilterCached Int [String] Word64
+         | EstimateComplexity Int [String]
            
 main = do
   hSetBuffering stdout NoBuffering
@@ -100,6 +102,7 @@ run (SolveMany offset limit tmout) = do
 
 run (FilterCached size ops expected) = mapM_ (putStrLn.ppProg) $ filterByCached expected $ generateRestrictedUpTo size ops (64, 64)
 
+run (EstimateComplexity size operations) = putStrLn $ show $ PC.expectedComplexity operations size
 
 options = info (clientOptions <**> helper) idm
 
@@ -150,6 +153,9 @@ clientOptions =
   <> command "filter-cached"
     (info filterCached
      (progDesc "Filter generated expressions by the value they should have on the first test input"))
+  <> command "estimate-complexity"
+    (info estimateComplexity
+     (progDesc "Estimate complexity of a problem, based on its SIZE and OPERATIONS"))
   )
 
 train = Train <$> (fmap read <$> ( optional $ strOption (metavar "LENGTH" <> short 'l' <> long "length")))
@@ -192,3 +198,6 @@ realSolveMany= SolveMany <$> (read <$> strOption (metavar "OFFSET" <> long "offs
 
 filterProblems = Filter <$> argument str (metavar "MYPROBLEMS-FILE")
                         <*> argument str (metavar "IDS-FILE")
+
+estimateComplexity = EstimateComplexity <$> (read <$> argument str (metavar "SIZE"))
+                                        <*> (words <$> (argument str (metavar "OPERATIONS")))
