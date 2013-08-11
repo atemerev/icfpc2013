@@ -211,7 +211,7 @@ isSimpleParts (Xor a b) = isSimpleC a && isSimpleC b
 isSimpleParts (Plus a b) = isSimpleC a && isSimpleC b
 
 generateRestrictedUpTo :: MonadLevel m => Int -> [String] -> (Int, Int) -> m ExpC -- allowed ops are passed as string list
-generateRestrictedUpTo n rst (alz, arz) = elements [1..n] >>= \i -> generateRestricted i rst (alz, arz)
+generateRestrictedUpTo n rst (alz, arz) = elements (map (\x -> traceShow x x) [1..n]) >>= \i -> level $ generateRestricted i rst (alz, arz)
 
 generateRestricted :: MonadLevel m => Int -> [String] -> (Int, Int) -> m ExpC -- allowed ops are passed as string list
 generateRestricted n rst (alz, arz) = 
