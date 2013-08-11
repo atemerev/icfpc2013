@@ -334,14 +334,14 @@ serExp' n restriction@(Restriction _ alz arz) fs valueConstraint
 serExp' 3 restriction fs valueConstraint = msum $ concat [
   map (\op -> serUnop 3 restriction fs op valueConstraint) (allowedUnaryOps restriction),
   map (\op -> serBinop 3 restriction fs op valueConstraint) (allowedBinaryOps restriction)]
-serExp' n restriction fs valueConstraint = msum $ concat [ -- TODO
-  if (n >= 4 && allowedIf restriction) then [serIf n restriction fs] else [],
+serExp' n restriction fs valueConstraint = msum $ concat [
+  if (n >= 4 && allowedIf restriction) then [serIf n restriction fs valueConstraint] else [],
   if (n >= 5 && fs == NoFold && allowedFold restriction) then [serFold n (restriction `removeOpRestriction` Fold_op)] else [],
   map (\op -> serUnop n restriction fs op valueConstraint) (allowedUnaryOps restriction),
   map (\op -> serBinop n restriction fs op valueConstraint) (allowedBinaryOps restriction)]
 
-serIf :: (MonadLevel m, ?tfold :: Bool, ?cache :: Cache) => Int -> Restriction -> FoldState -> m (ExpC, Bool, Int, Int)
-serIf n restriction@(Restriction ops alz arz) fs = do
+serIf :: (MonadLevel m, ?tfold :: Bool, ?cache :: Cache) => Int -> Restriction -> FoldState -> Maybe Word64 -> m (ExpC, Bool, Int, Int)
+serIf n restriction@(Restriction ops alz arz) fs valueConstraint = do
   sizeA <- elements [1..n - 3]
   let opsOnly = noRestriction {allowedOps = ops}
   let restrictionA = opsOnly
@@ -352,7 +352,11 @@ serIf n restriction@(Restriction ops alz arz) fs = do
     else do
       sizeB <- elements [1..n - 2 - sizeA]
       let sizeC = n - 1 - sizeA - sizeB
-      (b, foldB, lzb, rzb) <- serExp' sizeB restrictionB (if foldA then ExternalFold else fs) Nothing -- TODO
+      let aVal = evalOnSeed nothing64 nothing64 (expr a)
+      let (bValueConstraint, cValueConstraint) = 
+            if isNothing64 aVal then (Nothing, Nothing)
+            else if 0 == (fromMWord64 (error "too") aVal) then (valueConstraint, Nothing) else (Nothing, valueConstraint)
+      (b, foldB, lzb, rzb) <- serExp' sizeB restrictionB (if foldA then ExternalFold else fs) bValueConstraint
       -- Respecting restriction "at most alz constant-zero bits allowed in if(..) b else c":
       -- Assume b guarantees lzb left zero bits. If lzb <= alz, we're fine - no restriction on c.
       -- If lzb > alz, propagate restriction to c.
@@ -360,7 +364,7 @@ serIf n restriction@(Restriction ops alz arz) fs = do
           allowedZeroLeftBits = if lzb <= alz then 64 else alz
         , allowedZeroRightBits = if rzb <= arz then 64 else arz
         }
-      (c, foldC, lzc, rzc) <- serExp' sizeC restrictionC (if (foldA || foldB) then ExternalFold else fs) Nothing -- TODO
+      (c, foldC, lzc, rzc) <- serExp' sizeC restrictionC (if (foldA || foldB) then ExternalFold else fs) cValueConstraint
       let e = if0 a b c
       if isSimpleHead (expr e)
         then let (lze, rze) = leftRightZerosBinop lzb rzb lzc rzc (expr e)
