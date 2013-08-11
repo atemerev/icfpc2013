@@ -24,8 +24,8 @@ allTests = testGroup "Tests"
 mask64 :: Word64
 mask64 = 0xFFFFFFFFFFFFFFFF
 
-serProgSC r = generate $ \n -> serProg n r
-serExpressionSC r = generate $ \n -> serExpression' n r
+serProgSC r = generate $ \n -> serProg n r Nothing
+serExpressionSC r = generate $ \n -> serExpression' n r Nothing
 
 generatorTests = localOption (SmallCheckDepth 8) $ testGroup "Generation"
   [ testProperty "Programs have correct size" $

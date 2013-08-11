@@ -6,7 +6,9 @@ module Types
   , MWord64
   , nothing64
   , fromMWord64
+  , isNothing64
   , eval
+  , evalOnSeed
   , isConstExpr
   , isConstExprC
   , progSize

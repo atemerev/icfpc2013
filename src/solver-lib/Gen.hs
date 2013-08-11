@@ -215,7 +215,7 @@ generateRestrictedUpTo n rst (alz, arz) valueConstraint = elements [1..n] >>= \i
 
 generateRestricted :: MonadLevel m => Int -> [String] -> (Int, Int) -> Maybe Word64 -> m ExpC -- allowed ops are passed as string list
 generateRestricted n rst (alz, arz) valueConstraint = 
-  generateRestricted' tfold n restriction
+  generateRestricted' tfold n restriction valueConstraint
   where
     tfold = "tfold" `elem` rst
     restriction = restriction0 { allowedZeroLeftBits = alz, allowedZeroRightBits = arz }
@@ -233,24 +233,24 @@ generateRestricted n rst (alz, arz) valueConstraint =
     parse "fold" = Fold_op
     parse other = error $ "failed to parse operation " ++ other
 
-generateRestricted' :: MonadLevel m => Bool -> Int -> Restriction -> m ExpC
-generateRestricted' tfold n restriction = 
+generateRestricted' :: MonadLevel m => Bool -> Int -> Restriction -> Maybe Word64 -> m ExpC
+generateRestricted' tfold n restriction valueConstraint = 
   if tfold
   then
     let ?tfold = True
     in (\e -> fold_ mainArg zero e) `liftM` foldBodies (n-5) -- |fold x 0| is 2 + 1 + 1, hence n-4, and another -1 for top-level lambda
-  else serProg n restriction
+  else serProg n restriction valueConstraint
   where
     foldBodies :: (?tfold :: Bool, MonadLevel m) => Int -> m ExpC
     foldBodies n = do
       let opsOnlyRestriction = noRestriction {allowedOps = allowedOps restriction}
       let filledCache = let ?cache = M.empty
-                        in M.fromList [((i, InFoldBody), [p | p@(e,f,_,_) <- serExp' i opsOnlyRestriction InFoldBody,
+                        in M.fromList [((i, InFoldBody), [p | p@(e,f,_,_) <- serExp' i opsOnlyRestriction InFoldBody Nothing,
                                                                              isSimpleC e {-, usesFold2Arg e, usesFold1Arg e-} ])
                                       | i <- [cacheMin .. min n cacheMax]
                                       ]
       let ?cache = filledCache
-      (e, _, _, _) <- serExp' n (restriction `removeOpRestriction` Fold_op) InFoldBody -- Fold should not be there, but remove it just in case
+      (e, _, _, _) <- serExp' n (restriction `removeOpRestriction` Fold_op) InFoldBody Nothing -- TODO: vconstraint -- Fold should not be there, but remove it just in case
       -- guard $ usesFold2Arg e && usesFold1Arg e -- since initial value for acc in tfold is known, bodies that use just acc are not interesting
       return e
 
@@ -268,26 +268,26 @@ allowedFold :: Restriction -> Bool
 allowedFold r = allowed r Fold_op
 
 -- 
-serProg :: MonadLevel m => Int -> Restriction -> m ExpC
-serProg n restriction = serExpression (n-1) restriction-- remove 1 level of depth for top-level lambda
+serProg :: MonadLevel m => Int -> Restriction -> Maybe Word64 -> m ExpC
+serProg n restriction valueConstraint = serExpression (n-1) restriction valueConstraint -- remove 1 level of depth for top-level lambda
 
 -- a top-level expression, no tfold
-serExpression :: (MonadLevel m) => Int -> Restriction -> m ExpC
-serExpression n restriction = do
-  (e,_,_,_) <- (serExpression' n restriction)
+serExpression :: (MonadLevel m) => Int -> Restriction -> Maybe Word64 -> m ExpC
+serExpression n restriction valueConstraint = do
+  (e,_,_,_) <- (serExpression' n restriction valueConstraint)
   return e
 
-serExpression' :: (MonadLevel m) => Int -> Restriction -> m (ExpC, Bool, Int, Int)
-serExpression' n restriction = do
+serExpression' :: (MonadLevel m) => Int -> Restriction -> Maybe Word64 -> m (ExpC, Bool, Int, Int)
+serExpression' n restriction valueConstraint = do
   let opsOnlyRestriction = noRestriction {allowedOps = allowedOps restriction}
   let ?tfold = False
   let filledCache = let ?cache = M.empty
-                    in M.fromList [((i, fs), [p | p@(e,f,_,_) <- (serExp' i opsOnlyRestriction fs), isSimpleC e, fs /= InFoldBody || usesFold1Arg e || usesFold2Arg e])
+                    in M.fromList [((i, fs), [p | p@(e,f,_,_) <- (serExp' i opsOnlyRestriction fs Nothing), isSimpleC e, fs /= InFoldBody || usesFold1Arg e || usesFold2Arg e])
                                   | i <- [cacheMin .. min n cacheMax],
                                     fs <- [NoFold, ExternalFold, InFoldBody]
                                    ]
   let ?cache = filledCache
-  serExp' n restriction NoFold
+  serExp' n restriction NoFold valueConstraint
 
 data FoldState = NoFold -- Allowed to generate unrestricted expression except references to fold args
                | ExternalFold -- Not allowed to generate folds or references to fold args
@@ -302,35 +302,37 @@ cacheMin = 3
 cacheMax = 7
 
 -- Generates (expression, does it contain a fold?, how many left bits are zero?, how many right bits are zero?)
-serExp' :: (MonadLevel m, ?tfold :: Bool, ?cache :: Cache) => Int -> Restriction -> FoldState -> m (ExpC, Bool, Int, Int)
-serExp' n _ _ | n < 1 = mzero
+serExp' :: (MonadLevel m, ?tfold :: Bool, ?cache :: Cache) => Int -> Restriction -> FoldState -> Maybe Word64 -> m (ExpC, Bool, Int, Int)
+serExp' n _ _ _ | n < 1 = mzero
 -- if tfold is set, the only occurrence of MainArg is at the toplevel
-serExp' 1 (Restriction _ alz arz) InFoldBody = do
-  let maybeZero = if alz == 64 && arz == 64 then return (zero, False, 64, 64) else mzero
-  let maybeOne  = if alz >= 63 then return (one, False, 63, 0) else mzero
+serExp' 1 (Restriction _ alz arz) InFoldBody valueConstraint = do
+  let maybeZero = if alz == 64 && arz == 64 && maybe True (==0) valueConstraint then return (zero, False, 64, 64) else mzero
+  let maybeOne  = if alz >= 63 && maybe True (==1) valueConstraint then return (one, False, 63, 0) else mzero
+  let maybeMainArg = if maybe True (==(fromMWord64 (error "boo") $ evalOnSeed nothing64 nothing64 MainArg)) valueConstraint then return (mainArg, False, 0, 0) else mzero
   if ?tfold
   -- zero is allowed if alz == 64 && arz == 64
   -- one is allowed if alz >= 63
   then msum [maybeZero, maybeOne, return (fold1Arg, False, 0, 0), return (fold2Arg, False, 0, 0)]
-  else msum [return (mainArg, False, 0, 0), maybeZero, maybeOne,
+  else msum [maybeMainArg, maybeZero, maybeOne,
              return (fold1Arg, False, 0, 0), return (fold2Arg, False, 0, 0)]
-serExp' 1 (Restriction _ alz arz) _ = do
-  let maybeZero = if alz == 64 && arz == 64 then return (zero, False, 64, 64) else mzero
-  let maybeOne  = if alz >= 63 then return (one, False, 63, 0) else mzero
-  msum [maybeZero, maybeOne, return (mainArg, False, 0, 0)]
-serExp' 2 restriction fs = msum $ map (\op -> serUnop 2 restriction fs op) (allowedUnaryOps restriction)
-serExp' n restriction@(Restriction _ alz arz) fs
+serExp' 1 (Restriction _ alz arz) _ valueConstraint = do
+  let maybeZero = if alz == 64 && arz == 64 && maybe True (==0) valueConstraint then return (zero, False, 64, 64) else mzero
+  let maybeOne  = if alz >= 63 && maybe True (==1) valueConstraint then return (one, False, 63, 0) else mzero
+  let maybeMainArg = if maybe True (==(fromMWord64 (error "boo") $ evalOnSeed nothing64 nothing64 MainArg)) valueConstraint then return (mainArg, False, 0, 0) else mzero
+  msum [maybeZero, maybeOne, maybeMainArg]
+serExp' 2 restriction fs valueConstraint = msum $ map (\op -> serUnop 2 restriction fs op valueConstraint) (allowedUnaryOps restriction)
+serExp' n restriction@(Restriction _ alz arz) fs _ -- TODO
   -- When taking from cache, remember that the cache was unrestricted by left/right bit zeroing.
   -- If we need to get entries which are allowed to zero at most alz bits, then omit entries which all zero 
   | Just es <- M.lookup (n, fs) ?cache = elements (filter (\(e, _, lz, rz) -> lz <= alz && rz <= arz) es)
-serExp' 3 restriction fs = msum $ concat [
-  map (\op -> serUnop 3 restriction fs op) (allowedUnaryOps restriction),
-  map (\op -> serBinop 3 restriction fs op) (allowedBinaryOps restriction)]
-serExp' n restriction fs = msum $ concat [
+serExp' 3 restriction fs valueConstraint = msum $ concat [
+  map (\op -> serUnop 3 restriction fs op valueConstraint) (allowedUnaryOps restriction),
+  map (\op -> serBinop 3 restriction fs op valueConstraint) (allowedBinaryOps restriction)]
+serExp' n restriction fs valueConstraint = msum $ concat [ -- TODO
   if (n >= 4 && allowedIf restriction) then [serIf n restriction fs] else [],
   if (n >= 5 && fs == NoFold && allowedFold restriction) then [serFold n (restriction `removeOpRestriction` Fold_op)] else [],
-  map (\op -> serUnop n restriction fs op) (allowedUnaryOps restriction),
-  map (\op -> serBinop n restriction fs op) (allowedBinaryOps restriction)]
+  map (\op -> serUnop n restriction fs op valueConstraint) (allowedUnaryOps restriction),
+  map (\op -> serBinop n restriction fs op valueConstraint) (allowedBinaryOps restriction)]
 
 serIf :: (MonadLevel m, ?tfold :: Bool, ?cache :: Cache) => Int -> Restriction -> FoldState -> m (ExpC, Bool, Int, Int)
 serIf n restriction@(Restriction ops alz arz) fs = do
@@ -338,13 +340,13 @@ serIf n restriction@(Restriction ops alz arz) fs = do
   let opsOnly = noRestriction {allowedOps = ops}
   let restrictionA = opsOnly
   let restrictionB = opsOnly
-  (a, foldA, _, _) <- serExp' sizeA restrictionA fs
+  (a, foldA, _, _) <- serExp' sizeA restrictionA fs Nothing -- TODO
   if isConstExprC a
     then mzero
     else do
       sizeB <- elements [1..n - 2 - sizeA]
       let sizeC = n - 1 - sizeA - sizeB
-      (b, foldB, lzb, rzb) <- serExp' sizeB restrictionB (if foldA then ExternalFold else fs)
+      (b, foldB, lzb, rzb) <- serExp' sizeB restrictionB (if foldA then ExternalFold else fs) Nothing -- TODO
       -- Respecting restriction "at most alz constant-zero bits allowed in if(..) b else c":
       -- Assume b guarantees lzb left zero bits. If lzb <= alz, we're fine - no restriction on c.
       -- If lzb > alz, propagate restriction to c.
@@ -352,7 +354,7 @@ serIf n restriction@(Restriction ops alz arz) fs = do
           allowedZeroLeftBits = if lzb <= alz then 64 else alz
         , allowedZeroRightBits = if rzb <= arz then 64 else arz
         }
-      (c, foldC, lzc, rzc) <- serExp' sizeC restrictionC (if (foldA || foldB) then ExternalFold else fs)
+      (c, foldC, lzc, rzc) <- serExp' sizeC restrictionC (if (foldA || foldB) then ExternalFold else fs) Nothing -- TODO
       let e = if0 a b c
       if isSimpleHead (expr e)
         then let (lze, rze) = leftRightZerosBinop lzb rzb lzc rzc (expr e)
@@ -368,11 +370,11 @@ serFold n restriction@(Restriction ops _ _) = level $ do
   sizeArg <- elements [1..n - 4]
   sizeSeed <- elements [1..n - 3 - sizeArg]
   let sizeBody = n - 2 - sizeArg - sizeSeed
-  (c, foldC, lzc, rzc) <- serExp' sizeBody restrictionBody InFoldBody
+  (c, foldC, lzc, rzc) <- serExp' sizeBody restrictionBody InFoldBody Nothing -- TODO
   guard (usesFold1Arg c || usesFold2Arg c)
   -- TODO: is this really true that for tfold we could have ridiculous bodies that do not use foldAcc?
-  (a, foldA, _, _) <- serExp' sizeArg restrictionArg ExternalFold
-  (b, foldB, _, _) <- serExp' sizeSeed restrictionSeed ExternalFold
+  (a, foldA, _, _) <- serExp' sizeArg restrictionArg ExternalFold Nothing -- TODO
+  (b, foldB, _, _) <- serExp' sizeSeed restrictionSeed ExternalFold Nothing -- TODO
   let e = fold_ a b c
   if isSimpleHead (expr e)
     then let (lze, rze) = leftRightZerosUnop lzc rzc (expr e)
@@ -419,8 +421,8 @@ usesFold1Arg (ExpC _ e) = u e
     u (Xor a b) = usesFold1Arg a || usesFold1Arg b
     u (Plus a b) = usesFold1Arg a || usesFold1Arg b
 
-serUnop :: (MonadLevel m, ?tfold :: Bool, ?cache :: Cache) => Int -> Restriction -> FoldState -> OpName -> m (ExpC, Bool, Int, Int)
-serUnop n restriction@(Restriction ops alz arz) fs op = level $ do
+serUnop :: (MonadLevel m, ?tfold :: Bool, ?cache :: Cache) => Int -> Restriction -> FoldState -> OpName -> Maybe Word64 -> m (ExpC, Bool, Int, Int)
+serUnop n restriction@(Restriction ops alz arz) fs op valueConstraint = level $ do
   let opsOnly = noRestriction {allowedOps = ops}
   let (alz', arz') = case op of {
       Not_op -> (64, 64)
@@ -429,16 +431,23 @@ serUnop n restriction@(Restriction ops alz arz) fs op = level $ do
     ; Shr4_op -> (alz-4, min 64 (arz+4))
     ; Shr16_op -> (alz-16, min 64 (arz+16))
     }
+  let argValueConstraint = case op of {
+      Not_op -> fmap complement valueConstraint
+    ; Shl1_op -> Nothing -- TODO
+    ; Shr1_op -> Nothing -- TODO 
+    ; Shr4_op -> Nothing -- TODO
+    ; Shr16_op -> Nothing -- TODO
+    }
   guard (alz' >= 0 && arz' >= 0)  -- Out of zeros budget: skip
   let restrictionArg = Restriction ops alz' arz'
-  (a, foldA, lza, rza) <- serExp' (n-1) restrictionArg fs
+  (a, foldA, lza, rza) <- serExp' (n-1) restrictionArg fs argValueConstraint
   let e = applyUnop op a
   if isSimpleHead (expr e)
     then let (lzu, rzu) = leftRightZerosUnop lza rza (expr e) in return (e, foldA, lzu, rzu)
     else mzero
 
-serBinop :: (MonadLevel m, ?tfold :: Bool, ?cache :: Cache) => Int -> Restriction -> FoldState -> OpName -> m (ExpC, Bool, Int, Int)
-serBinop n restriction@(Restriction ops alz arz) fs op = level $ do
+serBinop :: (MonadLevel m, ?tfold :: Bool, ?cache :: Cache) => Int -> Restriction -> FoldState -> OpName -> Maybe Word64 -> m (ExpC, Bool, Int, Int)
+serBinop n restriction@(Restriction ops alz arz) fs op valueConstraint = level $ do
   let opsOnly = noRestriction {allowedOps = ops}
   let (alzA, arzA) = case op of {
       And_op -> (alz, arz)
@@ -453,8 +462,10 @@ serBinop n restriction@(Restriction ops alz arz) fs op = level $ do
   if sizeA > sizeB
     then mzero
     else do
-      (a, foldA, lza, rza) <- serExp' sizeA restrictionA fs
+      (a, foldA, lza, rza) <- serExp' sizeA restrictionA fs Nothing -- TODO
       guard $ expr a /= Zero -- all binary ops (and, or, xor, plus) are stupid if first arg is zero
+      let aValue' =  evalOnSeed nothing64 nothing64 (expr a) -- pretend that we do not know about fold args (even if we do)
+      let aValue = if isNothing64 aValue' then Nothing else Just (fromMWord64 (error "foo") aValue')
       let (alzB, arzB) = case op of {
           And_op  -> (alz, arz)
           -- if lza <= alz, we're fine: no restriction
@@ -463,8 +474,15 @@ serBinop n restriction@(Restriction ops alz arz) fs op = level $ do
         ; Xor_op  -> (if lza <= alz then 64 else alz, if rza <= arz then 64 else arz)
         ; Plus_op -> (if lza <= alz then 64 else alz, if rza <= arz then 64 else arz)
         }
+      let bValueConstraint = if aValue == Nothing then Nothing
+          else case op of {
+            And_op  -> Nothing -- TODO
+          ; Or_op   -> Nothing -- TODO
+          ; Xor_op  -> liftM2 (xor) aValue valueConstraint
+          ; Plus_op -> liftM2 (-) valueConstraint aValue
+          }
       let restrictionB = Restriction ops alzB arzB
-      (b, foldB, lzb, rzb) <- serExp' sizeB restrictionB (if foldA then ExternalFold else fs)
+      (b, foldB, lzb, rzb) <- serExp' sizeB restrictionB (if foldA then ExternalFold else fs) bValueConstraint
       let e = applyBinop op a b
       if isSimpleHead (expr e)
         then let (lze, rze) = leftRightZerosBinop lza rza lzb rzb (expr e) in return (e, foldA || foldB, lze, rze)
