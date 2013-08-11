@@ -30,7 +30,10 @@ solve pId size operations = do
 
   where
     loop inputs outputs = do
-      putStrLn $ "INOUTS to reproduce with client solve-exact: " ++ show (inputs, outputs)
+      putStrLn $
+        "INOUTS to reproduce with client solve-exact: "
+          ++ unwords operations ++ "\n"
+          ++ show (inputs, outputs)
       first <-
         maybe (throwIO $ ErrorCall "Nothing has been found") return
         =<< basicSolve size operations inputs outputs
