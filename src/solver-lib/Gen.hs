@@ -433,16 +433,13 @@ serExp' n restriction fs unknownParityOnly valueConstraint = msum $ concat [
 serIf :: (MonadLevel m, ?tfold :: Bool, ?cache :: Cache) => Bool -> Int -> Restriction -> FoldState -> Bool -> Maybe Word64 -> m (ExpC, Bool, Int, Int, Parity)
 -- bonus tasks have top-level if with a b c components of roughly equal size without nested ifs
 -- "bonus" controls if we are generating this special "if"
-serIf bonus n restriction_orig@(Restriction ops alz arz) fs unknownParityOnly valueConstraint = do
+serIf bonus n restriction@(Restriction ops alz arz) fs unknownParityOnly valueConstraint = do
   -- If bonus, the options for XXX in the condition (if (and 1 XXX)) are:
   --  XXX = 0
   --  XXX = 1
   --  XXX = MainArg
   --  XXX = (not MainArg)
   --  XXX = anything whose parity is PUnknown.
-  let restriction@(Restriction ops alz arz) = 
-        if bonus then restriction_orig `removeOpRestriction` If_op
-        else restriction_orig
   let (a_lo, a_hi) = 
         if bonus then if n < 30 then ((n-3) `div` 3,(n-3) `div` 3 + 2) else ((n-3)`div` 4,(n-3)`div`4 + 2)
         else (1,n-3)
