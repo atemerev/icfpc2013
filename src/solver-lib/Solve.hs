@@ -58,6 +58,7 @@ solve pId size operations = do
 
         -- mapM_ (putStrLn . ppProg) candidates
       print first
+      putStrLn $ ppProg first
       gr <- guessProgram pId (ppProg first)
       case gr of
         Win -> print gr
