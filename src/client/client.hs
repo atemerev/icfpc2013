@@ -54,7 +54,7 @@ run (Eval programOrId args) =
 
 run (Guess id program) = putStrLn =<< guessProgram id program
 
-run (Generate size ops) = mapM_ (putStrLn . ppProg) $ generateRestrictedUpTo size ops (64, 64) Nothing
+run (Generate size ops) = mapM_ (putStrLn . ppProg) $ generateRestrictedUpTo size ops (64, 64) False Nothing
 
 run (Unsolved fname) = putStrLn =<< FC.getUnsolved fname
 
@@ -67,7 +67,7 @@ run (FindSolvable fname tmout) = do
       res <- isFeasible tmout p
       _ <- case res of  
         Nothing -> return () -- putStrLn ("skipping " ++ problemId p ++ " - timed out")
-        Just () -> pp (p, generateRestricted (problemSize p) (operators p) (64, 64) Nothing)
+        Just () -> pp (p, generateRestricted (problemSize p) (operators p) (64, 64) False Nothing)
       tryGen ps
     pp (p, exps) = putStrLn $ (printf "%s|%d|%s|%d" (problemId p) (problemSize p) (intercalate " " $ operators p) (length exps))
 
@@ -107,7 +107,7 @@ run (SolveMany offset limit tmout bySize includeBonuses) = do
       solveWithTimeout tmout (problemId p) (problemSize p) (operators p)
       trySolve ps
 
-run (FilterCached size ops expected) = mapM_ (putStrLn.ppProg) $ filterByCached expected $ generateRestrictedUpTo size ops (64, 64) (Just expected)
+run (FilterCached size ops expected) = mapM_ (putStrLn.ppProg) $ filterByCached expected $ generateRestrictedUpTo size ops (64, 64) False (Just expected)
 
 run (EstimateComplexity size operations) = putStrLn $ show $ PC.expectedComplexity operations size
 

@@ -11,7 +11,8 @@ module ProgramCounting (
   EvalContext,
   evalCtx,
   eval,
-  expectedComplexity
+  expectedComplexity,
+  denumeralize
 ) where
 import System.Environment (getArgs)
 
@@ -221,6 +222,40 @@ expectedComplexity operations size_ =
     ifOk = "if0" `elem` operations
     foldOk = "fold" `elem` operations
     isTFold = "tfold" `elem` operations
+
+isBasicExpr :: Tag -> Bool
+isBasicExpr UF{} = False
+isBasicExpr AFS{} = False
+isBasicExpr AF{} = False
+isBasicExpr TF{} = False
+isBasicExpr C0 = True
+isBasicExpr C1 = True
+isBasicExpr X = True
+isBasicExpr Y = True
+isBasicExpr Z = True
+isBasicExpr (Not tag) = isBasicExpr tag
+isBasicExpr (Shl1 tag) = isBasicExpr tag
+isBasicExpr (Shr1 tag) = isBasicExpr tag
+isBasicExpr (Shr4 tag) = isBasicExpr tag
+isBasicExpr (Shr16 tag) = isBasicExpr tag
+-- tag2 usually has smaller size
+isBasicExpr (And tag1 tag2) = isBasicExpr tag2 && isBasicExpr tag1
+isBasicExpr (Or tag1 tag2) = isBasicExpr tag2 && isBasicExpr tag1
+isBasicExpr (Xor tag1 tag2) = isBasicExpr tag2 && isBasicExpr tag1
+isBasicExpr (Plus tag1 tag2) = isBasicExpr tag2 && isBasicExpr tag1
+isBasicExpr (If0 tag1 tag2 tag3) = isBasicExpr tag1 && isBasicExpr tag2 && isBasicExpr tag3
+isBasicExpr (Fold tag1 tag2 tag3) = isBasicExpr tag1 && isBasicExpr tag2 && isBasicExpr tag3
+
+denumeralize :: (?ctx :: Context) => Integer -> [Tag] -> Tag
+denumeralize x ts | length ts == 1 && isBasicExpr firstElem = firstElem
+                  | otherwise = denumeralize (x-base) (expandTag xType)
+  where
+    firstElem = head ts
+    counts = map countTag ts
+    accCounts = scanl (+) 0 counts
+    precedingCounts = takeWhile (<=x) accCounts
+    xType = ts !! (length precedingCounts)
+    base = last precedingCounts
 
 main = do
     n <- fmap (read.head) getArgs
