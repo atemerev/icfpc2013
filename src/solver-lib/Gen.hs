@@ -234,6 +234,8 @@ isSimpleHead (Shr16 (ExpC _ (Shr4 a))) = False
 isSimpleHead (Shr16 (ExpC _ (Shr16 (ExpC _ (Shr16 (ExpC _ (Shr16 a))))))) = False -- equal to 0
 isSimpleHead (Shr16 a) = True
 
+isSimpleHead (And (ExpC _ One) (ExpC _ (Shl1 a))) = False -- equal to Zero
+isSimpleHead (And (ExpC _ (Shl1 a)) (ExpC _ One)) = False -- equal to Zero
 isSimpleHead (And (ExpC _ Zero) b) = False
 isSimpleHead (And a (ExpC _ Zero)) = False
 -- Normal form: first operand must be smaller in size 
@@ -280,10 +282,10 @@ generateRestrictedUpTo :: MonadLevel m => Int -> [String] -> (Int, Int) -> Bool 
 generateRestrictedUpTo n rst (alz, arz) unknownParityOnly valueConstraint = elements [1..n] >>= \i -> generateRestricted i rst (alz, arz) unknownParityOnly valueConstraint
 
 generateRestricted :: MonadLevel m => Int -> [String] -> (Int, Int) -> Bool -> Maybe Word64 -> m ExpC -- allowed ops are passed as string list
-generateRestricted n rst (alz, arz) unknownParityOnly valueConstraint = 
-  generateRestricted' tfold n restriction unknownParityOnly valueConstraint
+generateRestricted n rst (alz, arz) unknownParityOnly valueConstraint = generateRestricted' bonus tfold n restriction unknownParityOnly valueConstraint
   where
     tfold = "tfold" `elem` rst
+    bonus = "bonus" `elem` rst
     restriction = restriction0 { allowedZeroLeftBits = alz, allowedZeroRightBits = arz }
     restriction0 = restrictionFromList $ map parse $ filter (/="bonus") $ filter (/="tfold") rst
     parse "not" = Not_op
@@ -299,13 +301,30 @@ generateRestricted n rst (alz, arz) unknownParityOnly valueConstraint =
     parse "fold" = Fold_op
     parse other = error $ "failed to parse operation " ++ other
 
-generateRestricted' :: MonadLevel m => Bool -> Int -> Restriction -> Bool -> Maybe Word64 -> m ExpC
-generateRestricted' tfold n restriction unknownParityOnly valueConstraint = 
-  if tfold
-  then
-    let ?tfold = True
-    in (\e -> fold_ mainArg zero e) `liftM` foldBodies (n-5) -- |fold x 0| is 2 + 1 + 1, hence n-4, and another -1 for top-level lambda
-  else serProg n restriction unknownParityOnly valueConstraint
+generateRestricted' :: MonadLevel m => Bool -> Bool -> Int -> Restriction -> Bool -> Maybe Word64 -> m ExpC
+generateRestricted' bonus tfold n restriction unknownParityOnly valueConstraint = 
+  -- All bonus tasks have the same form:
+  -- 1)top-level expression is (if (and 1 a) b c)
+  -- 2)there are no nested ifs
+  -- 3)sizes of a, b, c are roughly equal - 5-9 for tasks of size 20-25
+  --                                        9-15 for tasks of size 35-43
+  if bonus
+  then do (e,_,_,_,_) <- do let filledCache = 
+                                  let ?cache = M.empty
+                                      ?tfold = False
+                                  in M.fromList [((i, ExternalFold), [p | p@(e,f,_,_,_) <- (serExp' i (restriction `removeOpRestriction` If_op) ExternalFold False Nothing), isSimpleC e])
+                                                | i <- [5 .. 12]
+                                                ]
+                            let ?cache = M.empty
+                                ?tfold = False -- always
+                              in serIf True n restriction ExternalFold False valueConstraint
+          return e
+  else    
+    if tfold
+    then
+      let ?tfold = True
+      in (\e -> fold_ mainArg zero e) `liftM` foldBodies (n-5) -- |fold x 0| is 2 + 1 + 1, hence n-4, and another -1 for top-level lambda
+    else serProg n restriction unknownParityOnly valueConstraint
   where
     foldBodies :: (?tfold :: Bool, MonadLevel m) => Int -> m ExpC
     foldBodies n = do
@@ -402,28 +421,64 @@ serExp' n restriction@(Restriction _ alz arz) fs unknownParityOnly valueConstrai
               in if isNothing64 eVal then True else maybe True (==(fromMWord64 (error "zoo") eVal)) valueConstraint
     in
      elements (filter (\(e, _, lz, rz, py) -> lz <= alz && rz <= arz && fitsConstraint e ) es)
-                                         
 serExp' 3 restriction fs unknownParityOnly valueConstraint = msum $ concat [
   map (\op -> serUnop 3 restriction fs op unknownParityOnly valueConstraint) (allowedUnaryOps restriction),
   map (\op -> serBinop 3 restriction fs op unknownParityOnly valueConstraint) (allowedBinaryOps restriction)]
 serExp' n restriction fs unknownParityOnly valueConstraint = msum $ concat [
-  if (n >= 4 && allowedIf restriction) then [serIf n restriction fs unknownParityOnly valueConstraint] else [],
+  if (n >= 4 && allowedIf restriction) then [serIf False n restriction fs unknownParityOnly valueConstraint] else [],
   if (n >= 5 && fs == NoFold && allowedFold restriction) then [serFold n (restriction `removeOpRestriction` Fold_op) unknownParityOnly] else [],
   map (\op -> serUnop n restriction fs op unknownParityOnly valueConstraint) (allowedUnaryOps restriction),
   map (\op -> serBinop n restriction fs op unknownParityOnly valueConstraint) (allowedBinaryOps restriction)]
 
-serIf :: (MonadLevel m, ?tfold :: Bool, ?cache :: Cache) => Int -> Restriction -> FoldState -> Bool -> Maybe Word64 -> m (ExpC, Bool, Int, Int, Parity)
-serIf n restriction@(Restriction ops alz arz) fs unknownParityOnly valueConstraint = do
-  sizeA <- elements [1..n - 3]
+serIf :: (MonadLevel m, ?tfold :: Bool, ?cache :: Cache) => Bool -> Int -> Restriction -> FoldState -> Bool -> Maybe Word64 -> m (ExpC, Bool, Int, Int, Parity)
+-- bonus tasks have top-level if with a b c components of roughly equal size without nested ifs
+-- "bonus" controls if we are generating this special "if"
+serIf bonus n restriction_orig@(Restriction ops alz arz) fs unknownParityOnly valueConstraint = do
+  -- If bonus, the options for XXX in the condition (if (and 1 XXX)) are:
+  --  XXX = 0
+  --  XXX = 1
+  --  XXX = MainArg
+  --  XXX = (not MainArg)
+  --  XXX = anything whose parity is PUnknown.
+  let restriction@(Restriction ops alz arz) = 
+        if bonus then restriction_orig `removeOpRestriction` If_op
+        else restriction_orig
+  let (a_lo, a_hi) = 
+        if bonus then if n < 30 then ((n-3) `div` 3,(n-3) `div` 2) else ((n-3)`div` 4,(n-3)`div`3)
+        else (1,n-3)
+  sizeA_ <- elements [a_lo, a_hi]
+  guard $ (bonus == False || sizeA_ >= (n-2) `div` 4 - 2)
   let opsOnly = noRestriction {allowedOps = ops}
   let restrictionA = opsOnly
   let restrictionB = opsOnly
-  (a, foldA, _, _, _) <- serExp' sizeA restrictionA fs False Nothing -- no constraint is possible on condition
+  (sizeA0, (a_, foldA, _, _, _)) <- do
+    if bonus
+      then msum [
+         return (1, (zero, False, 64, 64, PZero))
+       , return (1, (one, False, 63, 0, POne))
+       , return (1, (mainArg, False, 0, 0, PMain))
+       , return (2, (not_ mainArg, False, 0, 0, PNegMain))
+       , do x <- (serExp' sizeA_ restrictionA fs True Nothing)
+            return (sizeA_, x)
+       ]
+      else do x <- serExp' sizeA_ restrictionA fs False Nothing -- no constraint is possible on condition
+              return (sizeA_, x)
+  guard (sizeA0 >= a_lo && sizeA0 <= a_hi)
+  let a = if bonus
+          then and_ one a_
+          else a_
+  let sizeA = if bonus then sizeA0 + 2 else sizeA0
+  guard $ isSimpleHead $ expr a
   if isConstExprC a
     then mzero
     else do
-      sizeB <- elements [1..n - 2 - sizeA]
+      let (b_lo, b_hi) = if bonus 
+                         then ((n-2-sizeA) `div` 2-2,(n-2-sizeA) `div` 2+2)
+                         else (1,n - 2 - sizeA)
+      sizeB <- elements [b_lo..b_hi]
+      guard $ (bonus == False || sizeB >= (n-2) `div` 4)
       let sizeC = n - 1 - sizeA - sizeB
+      guard $ (bonus == False || sizeC >= (n-2) `div` 4)
       let aVal = cached a
       let (bValueConstraint, cValueConstraint) = 
             if isNothing64 aVal then (Nothing, Nothing)
