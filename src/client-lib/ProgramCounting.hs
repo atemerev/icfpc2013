@@ -254,7 +254,7 @@ denumeralize x ts | length ts == 1 && isBasicExpr firstElem = firstElem
     counts = map countTag ts
     accCounts = scanl (+) 0 counts
     precedingCounts = takeWhile (<=x) accCounts
-    xType = ts !! (length precedingCounts)
+    xType = ts !! (length precedingCounts - 1)
     base = last precedingCounts
 
 main = do
