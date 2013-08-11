@@ -321,10 +321,16 @@ serExp' 1 (Restriction _ alz arz) _ valueConstraint = do
   let maybeMainArg = if maybe True (==(fromMWord64 (error "boo") $ evalOnSeed nothing64 nothing64 MainArg)) valueConstraint then return (mainArg, False, 0, 0) else mzero
   msum [maybeZero, maybeOne, maybeMainArg]
 serExp' 2 restriction fs valueConstraint = msum $ map (\op -> serUnop 2 restriction fs op valueConstraint) (allowedUnaryOps restriction)
-serExp' n restriction@(Restriction _ alz arz) fs _ -- TODO
+serExp' n restriction@(Restriction _ alz arz) fs valueConstraint
   -- When taking from cache, remember that the cache was unrestricted by left/right bit zeroing.
   -- If we need to get entries which are allowed to zero at most alz bits, then omit entries which all zero 
-  | Just es <- M.lookup (n, fs) ?cache = elements (filter (\(e, _, lz, rz) -> lz <= alz && rz <= arz) es)
+  | Just es <- M.lookup (n, fs) ?cache = 
+    let fitsConstraint e = 
+          let eVal = evalOnSeed nothing64 nothing64 (expr e)
+              in if isNothing64 eVal then True else maybe True (==(fromMWord64 (error "zoo") eVal)) valueConstraint
+    in
+     elements (filter (\(e, _, lz, rz) -> lz <= alz && rz <= arz && fitsConstraint e ) es)
+                                         
 serExp' 3 restriction fs valueConstraint = msum $ concat [
   map (\op -> serUnop 3 restriction fs op valueConstraint) (allowedUnaryOps restriction),
   map (\op -> serBinop 3 restriction fs op valueConstraint) (allowedBinaryOps restriction)]
