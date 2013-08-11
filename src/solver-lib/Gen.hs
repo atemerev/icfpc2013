@@ -226,6 +226,11 @@ generateRestricted n rst (alz, arz) =
 
 generateRestricted' :: MonadLevel m => Bool -> Bool -> Int -> Restriction -> m ExpC
 generateRestricted' bonus tfold n restriction = 
+  -- All bonus tasks have the same form:
+  -- 1)top-level expression is (if a b c)
+  -- 2)there are no nested ifs
+  -- 3)sizes of a, b, c are roughly equal - 5-9 for tasks of size 20-25
+  --                                        9-15 for tasks of size 35-43
   if bonus
   then do (e,_,_,_) <- do -- let filledCache = 
                           --       let ?cache = M.empty
