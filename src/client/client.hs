@@ -12,7 +12,7 @@ import Data.List (isInfixOf, intercalate, find, sortBy)
 import Data.Ord (comparing)
 import Text.Printf
 import System.IO
-import Solve (solve, isFeasible, solveExact, solveWithTimeout)
+import Solve (solve, isFeasible, solveExact, solveWithTimeout, bonusSolve)
 import PP (ppProg)
 import Data.Word
 import Filter
@@ -28,6 +28,7 @@ data Cmd = MyProblems
          | Unsolved String
          | FindSolvable String Int
          | TrainSolve Int
+         | TrainBonusSolve Int
          | Solve Int String String
          | Filter String String
          | SolveMany Int Int Int Bool Bool
@@ -76,6 +77,12 @@ run (TrainSolve size) = do
   let progId = (trainingId p)
   print p
   solve (trainingId p) size (trainingOps p)
+
+run (TrainBonusSolve size) = do
+  p <- HC.getTrainingProblem (Just size) Nothing
+  let progId = (trainingId p)
+  print p
+  bonusSolve (trainingId p) size (trainingOps p)
 
 run (Solve tmout fname id) = do
   problems <- FC.getUnsolvedHS fname
@@ -152,6 +159,9 @@ clientOptions =
   <> command "train-solve"
     (info trainSolve
      (progDesc "Solve the new training task of the given size"))
+  <> command "train-bonus-solve"
+    (info trainBonusSolve
+     (progDesc "Solve the new bonus training task of the given size (new algorithm!)"))
   <> command "low-level-solve"
     (info lowLevelSolve
      (progDesc "Try solving problem supplying its ID, SIZE, OPERATIONS manually"))
@@ -196,6 +206,8 @@ findSolvable = FindSolvable <$> argument str (metavar "FILE")
                             <*> (read <$> argument str (metavar "TIMEOUT"))
 
 trainSolve = TrainSolve <$> (read <$> argument str (metavar "SIZE"))
+
+trainBonusSolve = TrainBonusSolve <$> (read <$> argument str (metavar "SIZE"))
 
 lowLevelSolve = LowLevelSolve <$> argument str (metavar "ID")
                               <*> (read <$> argument str (metavar "SIZE"))

@@ -5,6 +5,7 @@ module ProgramCounting (
   expandTag,
   Context,
   newContext,
+  newContextFromStrings,
   defaultContext, -- ^ all operations allowed
   defaultAllowedOp1,
   defaultAllowedOp2,
@@ -12,14 +13,20 @@ module ProgramCounting (
   evalCtx,
   eval,
   expectedComplexity,
-  denumeralize
+  denumeralize,
+  buildCaches,
+  getCached,
+  getInputIdx,
+  getNumCachedProgs,
+  allFunctionsSpace,
+  findAllCachedMatches
 ) where
 import System.Environment (getArgs)
 
 import Data.Array
 import qualified Data.Array.Unboxed as AU
 import Data.Array.IArray (amap)
-import Data.List (sort, nub)
+import Data.List (sort, nub, findIndex)
 import Control.Monad
 import Text.Printf
 import Data.Bits
@@ -29,6 +36,7 @@ import qualified Data.Map as M
 import qualified Types as T
 
 size = 43
+allFunctionsSpace = [ AF n | n <- [1..size] ]
 
 --inFoldExprCount, topLevelNoFoldCount, topLevelCount, tfoldCount :: Array Int Integer
 
@@ -102,6 +110,26 @@ newContext allowedOp1 allowedOp2 isIfAllowed isFoldAllowed =
                  , topLevelCounts = amap (\expands -> sum $ map countTag expands) (topLevelExpands ctx)
                  , inTFoldExprCounts = amap (\expands -> sum $ map countTag expands) (inTFoldExprExpands ctx)
                  }) in ctx
+
+newContextFromStrings :: [String] -> Context
+newContextFromStrings operations = newContext op1 op2 ifOk foldOk
+  where
+    addOp :: String -> a -> [a] -> [a]
+    addOp op v vs | op `elem` operations = v:vs
+                  | otherwise = vs
+    op1 = addOp "not" Not $
+          addOp "shl1" Shl1 $
+          addOp "shr1" Shr1 $
+          addOp "shr4" Shr4 $
+          addOp "shr16" Shr16 $
+          []
+    op2 = addOp "and" And $
+          addOp "or" Or $
+          addOp "xor" Xor $
+          addOp "plus" Plus $
+          []
+    ifOk = "if0" `elem` operations
+    foldOk = "fold" `elem` operations
 
 expandTag :: (?ctx :: Context) => Tag -> [Tag]
 expandTag (UF 1) = [C0, C1, X, Y, Z]
@@ -223,28 +251,12 @@ evalCtx x y z = ECtx { x = x, y = y, z = z }
 expectedComplexity :: [String] -> Int -> Integer
 expectedComplexity operations size_ =
   if size_ > size then error "increase size in ProgramCounting.hs"
-  else let ?ctx = newContext op1 op2 ifOk foldOk in
+  else let ?ctx = newContextFromStrings operations in
           sum (map countTag tags)
   where
+    isTFold = "tfold" `elem` operations
     tags | isTFold = [ TF i | i <- [1..size_-4] ]
          | otherwise = [ AF i | i <- [1..size_] ]
-    addOp :: String -> a -> [a] -> [a]
-    addOp op v vs | op `elem` operations = v:vs
-                  | otherwise = vs
-    op1 = addOp "not" Not $
-          addOp "shl1" Shl1 $
-          addOp "shr1" Shr1 $
-          addOp "shr4" Shr4 $
-          addOp "shr16" Shr16 $
-          []
-    op2 = addOp "and" And $
-          addOp "or" Or $
-          addOp "xor" Xor $
-          addOp "plus" Plus $
-          []
-    ifOk = "if0" `elem` operations
-    foldOk = "fold" `elem` operations
-    isTFold = "tfold" `elem` operations
 
 isBasicExpr :: Tag -> Bool
 isBasicExpr UF{} = False
@@ -301,18 +313,30 @@ denumeralize x ts | length ts == 1 && isBasicExpr firstElem = firstElem
     xType = ts !! (length precedingCounts - 1)
     base = last precedingCounts
 
-newtype InterleavedCache = ICache (AU.UArray Int Word64) deriving Show
+data InterleavedCache = ICache !(AU.UArray Int Word64) !Int !Int [Word64] deriving Show
+getInputIdx :: InterleavedCache -> Word64 -> Maybe Int
+getInputIdx (ICache _ _ _ inputs) v = findIndex (==v) inputs
+
+getNumCachedProgs :: InterleavedCache -> Int
+getNumCachedProgs (ICache _ n _ _) = n
+
+getCached :: InterleavedCache -> Int -> Int -> Word64
+getCached (ICache vs cSize nInputs inputs) progId inputIdx = vs AU.! (nInputs*progId + inputIdx)
+
+findAllCachedMatches :: InterleavedCache -> Int -> Word64 -> [Int]
+findAllCachedMatches (ICache vs cSize nInputs inputs) outputIdx output =
+  [ progId | progId <- [0..cSize-1], let v = vs AU.! (progId*nInputs + outputIdx), v == output ]
+
 buildCaches :: (?ctx :: Context) => [Word64] -> Int -> InterleavedCache
-buildCaches inputs cacheSize = ICache $ AU.listArray (0,iCacheSize-1) computedValues
+buildCaches inputs cacheSize = ICache (AU.listArray (0,iCacheSize-1) computedValues) cacheSize nInputs inputs
   where
     nInputs = length inputs
     iCacheSize = (cacheSize*nInputs)
     computedValues = [ evalProg prog x
                      | n <- [0..cacheSize-1]
-                     , let prog = denumeralize (fromIntegral n) allPrograms
+                     , let prog = denumeralize (fromIntegral n) allFunctionsSpace
                      , x <- inputs
                      ]
-    allPrograms = [ AF n | n <- [1..30] ]
     evalProg program x = eval program 
       where
         ?ectx = evalCtx x 0 0
@@ -323,7 +347,7 @@ main = do
         size = read sizeStr
         maxN = sum $ map countTag [AF n | n <- [1..size]]
         inputV = [0x1122334455667788, 0xFEDCBA9876543210, 1]
-        ICache cache = buildCaches inputV (fromIntegral maxN)
+        ICache cache _ _ _ = buildCaches inputV (fromIntegral maxN)
     print maxN
     print $ map (\i -> cache AU.! (fromIntegral $ (i+1)*maxN - 1)) [0,1,2]
   where

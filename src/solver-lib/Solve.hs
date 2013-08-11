@@ -1,4 +1,5 @@
-module Solve (solve, solveExact, isFeasible, solveWithTimeout) where
+{-# LANGUAGE ImplicitParams #-}
+module Solve (solve, solveExact, bonusSolve, isFeasible, solveWithTimeout) where
 
 import RandomBV (bvs, goodRandoms)
 import Types
@@ -13,6 +14,8 @@ import System.Timeout
 import Data.Bits
 import Data.List (findIndex)
 import Text.Printf
+import ProgramCounting (buildCaches, newContextFromStrings, countTag, allFunctionsSpace, getNumCachedProgs, getCached, findAllCachedMatches)
+import Data.List
 
 basicSolve :: Int -> [String] -> [Word64] -> [Word64] -> IO (Maybe ExpC)
 basicSolve size operations inputs outputs = do
@@ -36,6 +39,25 @@ solveWithTimeout tmout pId size operations = do
     case res of
       Just () -> putStrLn ">>> DONE"
       Nothing -> putStrLn $ ">>> TIMED OUT ON " ++ pId
+
+bonusSolve :: String -> Int -> [String] -> IO ()
+bonusSolve pId size operations = do
+  let cacheSize = 550000
+      numInputs = 3
+      inputs = take numInputs bvs
+      cache = buildCaches inputs cacheSize
+  print $ "Cache size: " ++ show cacheSize
+  print $ "Last cached values: " ++ show (map (\i -> getCached cache (getNumCachedProgs cache - 1) i) [0..numInputs-1])
+
+  evalRes <- evalProgramById pId bvs
+  case evalRes of
+    EvalOK outputs -> do
+      let matches = map (\(outputIdx, output) -> findAllCachedMatches cache outputIdx output) (zip [0..numInputs-1] outputs)
+          matchedProgramIds = concat matches
+      print $ "Matches: " ++ show (map length matches)
+    EvalError msg -> error $ "evalProgramById returned error:" ++ show msg
+  where
+    ?ctx = newContextFromStrings operations
 
 solve :: String -> Int -> [String] -> IO ()
 solve pId size operations = do
