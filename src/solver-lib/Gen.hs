@@ -346,7 +346,7 @@ serIf n restriction@(Restriction ops alz arz) fs valueConstraint = do
   let opsOnly = noRestriction {allowedOps = ops}
   let restrictionA = opsOnly
   let restrictionB = opsOnly
-  (a, foldA, _, _) <- serExp' sizeA restrictionA fs Nothing -- TODO
+  (a, foldA, _, _) <- serExp' sizeA restrictionA fs Nothing -- no constraint is possible on condition
   if isConstExprC a
     then mzero
     else do
