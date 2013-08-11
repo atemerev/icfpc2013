@@ -162,6 +162,8 @@ isSimpleHead (Shr16 (ExpC _ (Shr1 a))) = False
 isSimpleHead (Shr16 (ExpC _ (Shr4 a))) = False
 isSimpleHead (Shr16 a) = True
 
+isSimpleHead (And (ExpC _ One) (ExpC _ (Shl1 a))) = False -- equal to Zero
+isSimpleHead (And (ExpC _ (Shl1 a)) (ExpC _ One)) = False -- equal to Zero
 isSimpleHead (And (ExpC _ Zero) b) = False
 isSimpleHead (And a (ExpC _ Zero)) = False
 -- Normal form: first operand must be smaller in size
@@ -229,17 +231,17 @@ generateRestricted n rst (alz, arz) =
 generateRestricted' :: MonadLevel m => Bool -> Bool -> Int -> Restriction -> m ExpC
 generateRestricted' bonus tfold n restriction = 
   -- All bonus tasks have the same form:
-  -- 1)top-level expression is (if a b c)
+  -- 1)top-level expression is (if (and 1 a) b c)
   -- 2)there are no nested ifs
   -- 3)sizes of a, b, c are roughly equal - 5-9 for tasks of size 20-25
   --                                        9-15 for tasks of size 35-43
   if bonus
-  then do (e,_,_,_) <- do -- let filledCache = 
-                          --       let ?cache = M.empty
-                          --           ?tfold = False
-                          --       in M.fromList [((i, ExternalFold), [p | p@(e,f,_,_) <- (serExp' i (restriction `removeOpRestriction` If_op) ExternalFold), isSimpleC e])
-                          --                     | i <- [5 .. 9]
-                          --                     ]
+  then do (e,_,_,_) <- do let filledCache = 
+                                let ?cache = M.empty
+                                    ?tfold = False
+                                in M.fromList [((i, ExternalFold), [p | p@(e,f,_,_) <- (serExp' i (restriction `removeOpRestriction` If_op) ExternalFold), isSimpleC e])
+                                              | i <- [5 .. 12]
+                                              ]
                           let ?cache = M.empty
                               ?tfold = False -- always
                             in serIf True n restriction ExternalFold
@@ -350,13 +352,17 @@ serIf bonus n restriction_orig@(Restriction ops alz arz) fs = do
         if bonus then restriction_orig `removeOpRestriction` If_op
         else restriction_orig
   let (a_lo, a_hi) = 
-        if bonus then if n < 30 then (5,9) else (9,15)
+        if bonus then if n < 30 then (4,7) else (9,13)
         else (1,n-3)
   sizeA <- elements [a_lo, a_hi]
   let opsOnly = noRestriction {allowedOps = ops}
   let restrictionA = opsOnly
   let restrictionB = opsOnly
-  (a, foldA, _, _) <- serExp' sizeA restrictionA fs
+  (a_, foldA, _, _) <- serExp' sizeA restrictionA fs
+  let a = if bonus
+          then and_ one a_
+          else a_
+  guard $ isSimpleHead $ expr a
   if isConstExprC a
     then mzero
     else do
