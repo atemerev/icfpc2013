@@ -1,4 +1,4 @@
-module Solve (solve, solveExact, isFeasible) where
+module Solve (solve, solveExact, isFeasible, solveWithTimeout) where
 
 import RandomBV (bvs)
 import Types
@@ -20,6 +20,14 @@ basicSolve size operations inputs outputs = do
     programs = generateRestrictedUpTo size operations (alz, arz)
     candidates = filterProgs inputs outputs $ filterByCached (head outputs) programs
   runPS candidates 4 (const False)
+
+solveWithTimeout :: Int -> String -> Int -> [String] -> IO ()
+solveWithTimeout tmout pId size operations = do
+    res <- timeout (tmout * 10^6) $ do
+      solve pId size operations
+    case res of
+      Just () -> putStrLn ">>> DONE"
+      Nothing -> putStrLn $ ">>> TIMED OUT ON " ++ pId
 
 solve :: String -> Int -> [String] -> IO ()
 solve pId size operations = do

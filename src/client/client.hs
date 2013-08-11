@@ -12,7 +12,7 @@ import Data.List (isInfixOf, intercalate, find, sortBy)
 import Data.Ord (comparing)
 import Text.Printf
 import System.IO
-import Solve (solve, isFeasible, solveExact)
+import Solve (solve, isFeasible, solveExact, solveWithTimeout)
 import PP (ppProg)
 import Data.Word
 import Filter
@@ -29,7 +29,7 @@ data Cmd = MyProblems
          | TrainSolve Int
          | Solve String String
          | Filter String String
-         | SolveMany Int Int Int
+         | SolveMany Int Int Int Bool
          | LowLevelSolve String Int [String]
          | SolveExact Int [String] ([Word64], [Word64])
          | FilterCached Int [String] Word64
@@ -88,18 +88,19 @@ run (SolveExact size ops (ins, outs)) = solveExact size ops ins outs
 
 run (Filter problemsFile idsFile) = FC.filterByIds problemsFile idsFile >>= putStrLn
   
-run (SolveMany offset limit tmout) = do
+run (SolveMany offset limit tmout bySize) = do
   problems <- HC.getUnsolved
-  let workload = take limit $ drop offset $ sortBy (comparing problemSize) problems
+  let workload = take limit $ drop offset $ sortProblems problems
   trySolve workload
   where
+    sortProblems = if bySize then sortBy (comparing problemSize)
+                     else sortBy (comparing complexity)
+    complexity p = PC.expectedComplexity (operators p) (problemSize p)
+    
     trySolve [] =  putStrLn "All done!"
     trySolve (p:ps) = do
-      putStrLn $ printf "Trying task %s, size %d, operations (%s)" (problemId p) (problemSize p) (intercalate " " $ operators p)
-      res <- isFeasible tmout p
-      _ <- case res of  
-        Nothing -> putStrLn ("  skipping " ++ problemId p ++ " - timed out")
-        Just () -> solve (problemId p) (problemSize p) (operators p)
+      putStrLn $ printf ">>> Trying %s, size %d, operations (%s)" (problemId p) (problemSize p) (intercalate " " $ operators p)
+      solveWithTimeout tmout (problemId p) (problemSize p) (operators p)
       trySolve ps
 
 run (FilterCached size ops expected) = mapM_ (putStrLn.ppProg) $ filterByCached expected $ generateRestrictedUpTo size ops (64, 64)
@@ -209,6 +210,7 @@ realSolve = Solve <$> argument str (metavar "FILE")
 realSolveMany= SolveMany <$> (read <$> strOption (metavar "OFFSET" <> long "offset"))
                          <*> (read <$> strOption (metavar "LIMIT" <> long "limit"))
                          <*> (read <$> strOption (metavar "TIMEOUT" <> long "timeout"))
+                         <*> (switch (long "by-size" <> help "order tasks by size, not by complexity (faster)" <> value False))
 
 filterProblems = Filter <$> argument str (metavar "MYPROBLEMS-FILE")
                         <*> argument str (metavar "IDS-FILE")
