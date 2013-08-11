@@ -14,7 +14,7 @@ import System.Timeout
 import Data.Bits
 import Data.List (findIndex)
 import Text.Printf
-import ProgramCounting (buildCaches, newContextFromStrings, countTag, allFunctionsSpace, getNumCachedProgs, getCached, findAllCachedMatches)
+import ProgramCounting (buildCaches, newContextFromStrings, countTag, allFunctionsSpace, getNumCachedProgs, getCached, findAllCachedMatches, tag2expr, denumeralize)
 import Data.List
 
 basicSolve :: Int -> [String] -> [Word64] -> [Word64] -> IO (Maybe ExpC)
@@ -54,6 +54,8 @@ bonusSolve pId size operations = do
     EvalOK outputs -> do
       let matches = map (\(outputIdx, output) -> findAllCachedMatches cache outputIdx output) (zip [0..numInputs-1] outputs)
           matchedProgramIds = concat matches
+          matchedPrograms :: [ExpC]
+          matchedPrograms = map (\n -> tag2expr $ denumeralize (fromIntegral n) allFunctionsSpace) matchedProgramIds
       print $ "Matches: " ++ show (map length matches)
     EvalError msg -> error $ "evalProgramById returned error:" ++ show msg
   where

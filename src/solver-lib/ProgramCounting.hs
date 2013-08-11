@@ -19,7 +19,8 @@ module ProgramCounting (
   getInputIdx,
   getNumCachedProgs,
   allFunctionsSpace,
-  findAllCachedMatches
+  findAllCachedMatches,
+  tag2expr
 ) where
 import System.Environment (getArgs)
 
