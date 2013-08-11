@@ -13,22 +13,6 @@ import qualified Data.Map as M
 
 import Debug.Trace
 
--- Traits of function:
--- * If at least one out has bit 0 = 1, cannot generate top-level shl or fold/shl or and (shl, _)
--- * If at least one out has set bits 63..[63, 60, 48], cannot generate same with shr
---   * (propagate mustVaryXXXBits through Fold, And)
--- "Must vary left X bits and right Y bits":
---   Zero:     reject if l > 0 or r > 0
---   One:      reject if l < 64
---   Not  (a): no constraint
---   Shl1 (a): l, r -> l-1, r+1 where r > 1
---   Shr1 (a): l, r -> l+1, r-1 where l > 1
---   Shr4 (a): l, r -> l+4, r-4 where l > 4
---   Shr16(a): l, r -> l+16,r-16 where l > 16
---      to have non-zero left l bits in Shr16(a), must have non-zero left l+16 bits in a; where l > 16
---   And(a,b): l, r -> l, r
---   Everything else: skip.
-
 leftRightZerosUnop :: Int -> Int -> Exp -> (Int, Int)
 leftRightZerosUnop lza rza Not{} = (0, 0)
 leftRightZerosUnop lza rza Shl1{} = (max (lza-1) 0, min (rza+1) 64)
@@ -41,7 +25,7 @@ leftRightZerosUnop lza rza Fold{} = (lza, rza)
 leftRightZerosBinop :: Int -> Int -> Int -> Int -> Exp -> (Int, Int)
 leftRightZerosBinop lza rza lzb rzb And{} = (max lza lzb, max rza rzb)
 leftRightZerosBinop lza rza lzb rzb Or{} = (min lza lzb, min rza rzb)
-leftRightZerosBinop lza rza lzb rzb Xor{} = (0, 0) -- no guarantees
+leftRightZerosBinop lza rza lzb rzb Xor{} = (min lza lzb, min rza rzb)
 leftRightZerosBinop lza rza lzb rzb Plus{} = (max (min lza lzb - 1) 0, min rza rzb)
 -- If interpreted as binop over its two branches
 leftRightZerosBinop lza rza lzb rzb If{} = (min lza lzb, min rza rzb)
@@ -411,9 +395,13 @@ serUnop n restriction@(Restriction ops alz arz) fs op = level $ do
 serBinop :: (MonadLevel m, ?tfold :: Bool, ?cache :: Cache) => Int -> Restriction -> FoldState -> OpName -> m (ExpC, Bool, Int, Int)
 serBinop n restriction@(Restriction ops alz arz) fs op = level $ do
   let opsOnly = noRestriction {allowedOps = ops}
-  let restrictionA = opsOnly
-  let restrictionB = opsOnly
-  -- TODO Properly propagate restriction
+  let (alzA, arzA) = case op of {
+      And_op -> (alz, arz)
+    ; Or_op -> (64, 64)
+    ; Xor_op -> (64, 64)
+    ; Plus_op -> (64, 64)
+    }
+  let restrictionA = Restriction ops alzA arzA
   sizeA <- elements [1..n - 2]
   let sizeB = n - 1 - sizeA
   -- Normal form: first operand must be smaller in size
@@ -422,6 +410,15 @@ serBinop n restriction@(Restriction ops alz arz) fs op = level $ do
     else do
       (a, foldA, lza, rza) <- serExp' sizeA restrictionA fs
       guard $ expr a /= Zero -- all binary ops (and, or, xor, plus) are stupid if first arg is zero
+      let (alzB, arzB) = case op of {
+          And_op  -> (alz, arz)
+          -- if lza <= alz, we're fine: no restriction
+          -- if lza > alz, responsibility of generating nonzero bits is on B: use alz.
+        ; Or_op   -> (if lza <= alz then 64 else alz, if rza <= arz then 64 else arz)
+        ; Xor_op  -> (if lza <= alz then 64 else alz, if rza <= arz then 64 else arz)
+        ; Plus_op -> (if lza <= alz then 64 else alz, if rza <= arz then 64 else arz)
+        }
+      let restrictionB = Restriction ops alzB arzB
       (b, foldB, lzb, rzb) <- serExp' sizeB restrictionB (if foldA then ExternalFold else fs)
       let e = applyBinop op a b
       if isSimpleHead (expr e)
