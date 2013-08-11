@@ -92,6 +92,7 @@ run (Filter problemsFile idsFile) = FC.filterByIds problemsFile idsFile >>= putS
 run (SolveMany offset limit tmout bySize includeBonuses) = do
   problemsUnfiltered <- HC.getUnsolved
   let problems = if includeBonuses then problemsUnfiltered else filter (not.("bonus" `elem`).operators) problemsUnfiltered
+  putStrLn $ ">>> " ++ show (length problems) ++ " remaining"
   let workload = take limit $ drop offset $ sortProblems problems
   trySolve workload
   where
