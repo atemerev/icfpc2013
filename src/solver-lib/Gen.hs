@@ -51,6 +51,18 @@ data OpName = Not_op | Shl1_op | Shr1_op | Shr4_op
             | Shr16_op | And_op | Or_op | Xor_op
             | Plus_op | If_op | Fold_op
             deriving (Eq, Ord, Show)
+
+applyUnop Not_op x = not_ x
+applyUnop Shl1_op x = shl1 x
+applyUnop Shr1_op x = shr1 x
+applyUnop Shr4_op x = shr4 x
+applyUnop Shr16_op x = shr16 x
+applyBinop And_op a b = and_ a b
+applyBinop Or_op a b = or_ a b
+applyBinop Xor_op a b = xor_ a b
+applyBinop Plus_op a b = plus a b
+
+
 -- allowedZeroLeftBits: "don't generate functions which are guaranteed
 -- to only return values with > allowedZeroLeftBits zero bits on the left"
 data Restriction = Restriction { allowedOps :: !Int, allowedZeroLeftBits :: !Int, allowedZeroRightBits :: !Int } deriving (Eq, Show)
@@ -63,12 +75,6 @@ removeOpRestriction :: Restriction -> OpName -> Restriction
 removeOpRestriction base op = base { allowedOps = allowedOps base .&. (complement (restrictionMaskFromOp op)) }
 
 allowed restriction op = hasRestriction restriction (restrictionFromOp op)
-
-allow restriction opName f =
-  if allowed restriction opName then Just f else Nothing
-
-allowUnary restriction opName f =
-  if allowedUnary restriction opName then Just f else Nothing
 
 allowedUnary r@(Restriction _ alz arz) opName = allowed r opName && case opName of {
     Shl1_op -> arz >= 1
@@ -226,20 +232,18 @@ generateRestricted' tfold n restriction =
       return e
 
 
-allowedUnaryOps :: Restriction -> [ExpC -> ExpC]
-allowedUnaryOps r = 
-  catMaybes [ allowUnary r op f | (op,f) <- [(Not_op, not_), (Shl1_op, shl1), (Shr1_op, shr1), (Shr4_op, shr4), (Shr16_op, shr16)]]
+allowedUnaryOps :: Restriction -> [OpName]
+allowedUnaryOps r = [op | op <- [Not_op, Shl1_op, Shr1_op, Shr4_op, Shr16_op], allowedUnary r op]
 
-allowedBinaryOps :: Restriction -> [ExpC -> ExpC -> ExpC]
-allowedBinaryOps r = 
-  catMaybes [ allow r op f | (op,f) <- [(And_op, and_), (Or_op, or_), (Xor_op, xor_), (Plus_op, plus)]]
+allowedBinaryOps :: Restriction -> [OpName]
+allowedBinaryOps r = [op | op <- [And_op, Or_op, Xor_op, Plus_op], allowed r op]
 
 allowedIf :: Restriction -> Bool
 allowedIf r = allowed r If_op
   
 allowedFold :: Restriction -> Bool
 allowedFold r = allowed r Fold_op
-      
+
 -- 
 serProg :: MonadLevel m => Int -> Restriction -> m ExpC
 serProg n restriction = serExpression (n-1) restriction-- remove 1 level of depth for top-level lambda
@@ -386,18 +390,18 @@ usesFold1Arg (ExpC _ e) = u e
     u (Xor a b) = usesFold1Arg a || usesFold1Arg b
     u (Plus a b) = usesFold1Arg a || usesFold1Arg b
 
-serUnop :: (MonadLevel m, ?tfold :: Bool, ?cache :: Cache) => Int -> Restriction -> FoldState -> (ExpC -> ExpC) -> m (ExpC, Bool, Int, Int)
+serUnop :: (MonadLevel m, ?tfold :: Bool, ?cache :: Cache) => Int -> Restriction -> FoldState -> OpName -> m (ExpC, Bool, Int, Int)
 serUnop n restriction@(Restriction ops alz arz) fs op = level $ do
   let opsOnly = noRestriction {allowedOps = ops}
   let restrictionArg = opsOnly
   -- TODO Properly propagate restriction
   (a, foldA, lza, rza) <- serExp' (n-1) restrictionArg fs
-  let e = op a
+  let e = applyUnop op a
   if isSimpleHead (expr e)
     then let (lzu, rzu) = leftRightZerosUnop lza rza (expr e) in return (e, foldA, lzu, rzu)
     else mzero
 
-serBinop :: (MonadLevel m, ?tfold :: Bool, ?cache :: Cache) => Int -> Restriction -> FoldState -> (ExpC -> ExpC -> ExpC) -> m (ExpC, Bool, Int, Int)
+serBinop :: (MonadLevel m, ?tfold :: Bool, ?cache :: Cache) => Int -> Restriction -> FoldState -> OpName -> m (ExpC, Bool, Int, Int)
 serBinop n restriction@(Restriction ops alz arz) fs op = level $ do
   let opsOnly = noRestriction {allowedOps = ops}
   let restrictionA = opsOnly
@@ -412,7 +416,7 @@ serBinop n restriction@(Restriction ops alz arz) fs op = level $ do
       (a, foldA, lza, rza) <- serExp' sizeA restrictionA fs
       guard $ expr a /= Zero -- all binary ops (and, or, xor, plus) are stupid if first arg is zero
       (b, foldB, lzb, rzb) <- serExp' sizeB restrictionB (if foldA then ExternalFold else fs)
-      let e = op a b
+      let e = applyBinop op a b
       if isSimpleHead (expr e)
-        then let (lze, rze) = leftRightZerosBinop lza rza lzb rzb (expr e) in return (op a b, foldA || foldB, lze, rze)
+        then let (lze, rze) = leftRightZerosBinop lza rza lzb rzb (expr e) in return (e, foldA || foldB, lze, rze)
         else mzero
