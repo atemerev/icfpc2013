@@ -12,20 +12,70 @@ import qualified Data.Map as M
 
 import Debug.Trace
 
-restrictionFromList rs = sum [
-    (if r == Not_op then 1 `shiftL` 0 else 0) +
-    (if r == Shl1_op then 1 `shiftL` 1 else 0) +
-    (if r == Shr1_op then 1 `shiftL` 2 else 0) +
-    (if r == Shr4_op then 1 `shiftL` 3 else 0) +
-    (if r == Shr16_op then 1 `shiftL` 4 else 0) +
-    (if r == And_op then 1 `shiftL` 5 else 0) +
-    (if r == Or_op then 1 `shiftL` 6 else 0) +
-    (if r == Xor_op then 1 `shiftL` 7 else 0) +
-    (if r == Plus_op then 1 `shiftL` 8 else 0) +
-    (if r == If_op then 1 `shiftL` 9 else 0) +
-    (if r == Fold_op then 1 `shiftL` 10 else 0)
-    | r <- rs
-    ]
+-- Traits of function:
+-- * If at least one out has bit 0 = 1, cannot generate top-level shl or fold/shl or and (shl, _)
+-- * If at least one out has set bits 63..[63, 60, 48], cannot generate same with shr
+--   * (propagate mustVaryXXXBits through Fold, And)
+-- "Must vary left X bits and right Y bits":
+--   Zero:     reject if l > 0 or r > 0
+--   One:      reject if l < 64
+--   Not  (a): no constraint
+--   Shl1 (a): l, r -> l-1, r+1 where r > 1
+--   Shr1 (a): l, r -> l+1, r-1 where l > 1
+--   Shr4 (a): l, r -> l+4, r-4 where l > 4
+--   Shr16(a): l, r -> l+16,r-16 where l > 16
+--      to have non-zero left l bits in Shr16(a), must have non-zero left l+16 bits in a; where l > 16
+--   And(a,b): l, r -> l, r
+--   Everything else: skip.
+
+-- Generators are restricted to allowed function set
+data OpName = Not_op | Shl1_op | Shr1_op | Shr4_op
+            | Shr16_op | And_op | Or_op | Xor_op
+            | Plus_op | If_op | Fold_op
+            deriving (Eq, Ord, Show)
+type Restriction = Int
+noRestriction = 0xFFFF :: Int
+
+allowed restriction op = hasRestriction restriction (restrictionFromOp op)
+
+allow restriction opName f =
+  if allowed restriction opName then Just f else Nothing
+
+restrictionFromOp :: OpName -> Restriction
+restrictionFromOp Not_op = 1 `shiftL` 0
+restrictionFromOp Shl1_op = 1 `shiftL` 1
+restrictionFromOp Shr1_op = 1 `shiftL` 2
+restrictionFromOp Shr4_op = 1 `shiftL` 3
+restrictionFromOp Shr16_op = 1 `shiftL` 4
+restrictionFromOp And_op = 1 `shiftL` 5
+restrictionFromOp Or_op = 1 `shiftL` 6
+restrictionFromOp Xor_op = 1 `shiftL` 7
+restrictionFromOp Plus_op = 1 `shiftL` 8
+restrictionFromOp If_op = 1 `shiftL` 9
+restrictionFromOp Fold_op = 1 `shiftL` 10
+
+mustVaryRightBit :: Restriction
+mustVaryRightBit = 1 `shiftL` 11
+
+mustVaryLeftBit :: Restriction
+mustVaryLeftBit = 1 `shiftL` 12
+
+mustVaryLeft4Bits :: Restriction
+mustVaryLeft4Bits = 1 `shiftL` 13
+
+mustVaryLeft16Bits :: Restriction
+mustVaryLeft16Bits = 1 `shiftL` 14
+
+restrictionFromList rs = sum $ map restrictionFromOp rs
+
+addRestriction :: Restriction -> Restriction -> Restriction
+addRestriction = (.|.)
+
+hasRestriction :: Restriction -> Restriction -> Bool
+hasRestriction base elem = base .&. elem /= 0
+
+removeRestriction :: Restriction -> Restriction -> Restriction
+removeRestriction base elem = base .&. (complement elem)
 
 isSimpleC :: ExpC -> Bool
 isSimpleC ec = isSimple (expr ec)
@@ -147,36 +197,15 @@ generateRestricted' tfold n restriction =
     foldBodies = do
       n <- getDepth
       let filledCache = let ?cache = M.empty
-                        in M.fromList [((i, InFoldBody), [(e,f) | (e,f) <- list i (serExp' i restriction InFoldBody), isSimpleC e, usesFold2Arg e, usesFold1Arg e])
+                        in M.fromList [((i, InFoldBody), [(e,f) | (e,f) <- list i (serExp' i restriction InFoldBody),
+                                                                           isSimpleC e, usesFold2Arg e, usesFold1Arg e])
                                       | i <- [cacheMin .. min n cacheMax]
                                       ]
       let ?cache = filledCache
-      (e, hasFold) <- serExp' n (restriction .&. complement (1 `shiftL` 10)) InFoldBody -- Fold should not be there, but remove it just in case
+      (e, hasFold) <- serExp' n (restriction `removeRestriction` (restrictionFromOp Fold_op)) InFoldBody -- Fold should not be there, but remove it just in case
       guard $ usesFold2Arg e && usesFold1Arg e -- since initial value for acc in tfold is known, bodies that use just acc are not interesting
       return e
 
--- Generators are restricted to allowed function set
-data OpName = Not_op | Shl1_op | Shr1_op | Shr4_op
-            | Shr16_op | And_op | Or_op | Xor_op
-            | Plus_op | If_op | Fold_op
-            deriving (Eq, Ord, Show)
-type Restriction = Int
-noRestriction = 0xFFFF :: Int
-
-allowed restriction Not_op = restriction .&. (1 `shiftL` 0) /= 0
-allowed restriction Shl1_op = restriction .&. (1 `shiftL` 1) /= 0
-allowed restriction Shr1_op = restriction .&. (1 `shiftL` 2) /= 0
-allowed restriction Shr4_op = restriction .&. (1 `shiftL` 3) /= 0
-allowed restriction Shr16_op = restriction .&. (1 `shiftL` 4) /= 0
-allowed restriction And_op = restriction .&. (1 `shiftL` 5) /= 0
-allowed restriction Or_op = restriction .&. (1 `shiftL` 6) /= 0
-allowed restriction Xor_op = restriction .&. (1 `shiftL` 7) /= 0
-allowed restriction Plus_op = restriction .&. (1 `shiftL` 8) /= 0
-allowed restriction If_op = restriction .&. (1 `shiftL` 9) /= 0
-allowed restriction Fold_op = restriction .&. (1 `shiftL` 10) /= 0
-
-allow restriction opName f =
-  if allowed restriction opName then Just f else Nothing
 
 allowedUnaryOps :: Restriction -> [ExpC -> ExpC]
 allowedUnaryOps r = 
@@ -222,8 +251,8 @@ type Cache = M.Map (Int, FoldState) [(ExpC, Bool)]
 cacheMin = 3
 cacheMax = 7
 
--- Generates (expression, does it contain a fold?)
-serExp' :: (MonadPlus m, ?tfold :: Bool, ?cache :: Cache) => Int -> Restriction -> FoldState -> m (ExpC, Bool)
+-- Generates (expression, does it contain a fold?, how many left bits are zero?, how many right bits are zero?)
+serExp' :: (MonadPlus m, ?tfold :: Bool, ?cache :: Cache) => Int -> Restriction -> FoldState -> m (ExpC, Bool, Int, Int)
 serExp' n _ _ | n < 1 = mzero
 -- if tfold is set, the only occurrence of MainArg is at the toplevel
 serExp' 1 _ InFoldBody = if ?tfold
@@ -238,7 +267,7 @@ serExp' 3 restriction fs = msum $ concat [
   map (\op -> serBinop 3 restriction fs op) (allowedBinaryOps restriction)]
 serExp' n restriction fs = msum $ concat [
   if (n >= 4 && allowedIf restriction) then [serIf n restriction fs] else [],
-  if (n >= 5 && fs == NoFold && allowedFold restriction) then [serFold n (restriction .&. complement (1 `shiftL` 10))] else [],
+  if (n >= 5 && fs == NoFold && allowedFold restriction) then [serFold n (restriction `removeRestriction` (restrictionFromOp Fold_op))] else [],
   map (\op -> serUnop n restriction fs op) (allowedUnaryOps restriction),
   map (\op -> serBinop n restriction fs op) (allowedBinaryOps restriction)]
 
