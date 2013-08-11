@@ -354,6 +354,7 @@ serIf bonus n restriction_orig@(Restriction ops alz arz) fs = do
         if bonus then if n < 30 then ((n-3) `div` 3,(n-3) `div` 2) else ((n-3)`div` 4,(n-3)`div`3)
         else (1,n-3)
   sizeA_ <- elements [a_lo, a_hi]
+  guard $ (bonus == False || sizeA_ >= (n-2) `div` 3 - 2)
   let opsOnly = noRestriction {allowedOps = ops}
   let restrictionA = opsOnly
   let restrictionB = opsOnly
@@ -370,6 +371,7 @@ serIf bonus n restriction_orig@(Restriction ops alz arz) fs = do
                          then ((n-2-sizeA) `div` 2-2,(n-2-sizeA) `div` 2+2)
                          else (1,n - 2 - sizeA)
       sizeB <- elements [b_lo..b_hi]
+      guard $ (bonus == False || sizeB >= (n-2) `div` 3)
       let sizeC = n - 1 - sizeA - sizeB
       guard $ (bonus == False || sizeC >= (n-2) `div` 3)
       (b, foldB, lzb, rzb) <- serExp' sizeB restrictionB (if foldA then ExternalFold else fs)
