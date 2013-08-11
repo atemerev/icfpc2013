@@ -66,12 +66,16 @@ solve pId size operations = do
           putStrLn $ "Mismatch on " ++ show input ++ " : " ++ show actual ++ " instead of " ++ show expected
           loop (input:inputs) (expected:outputs)
         GuessError err -> do
-          putStrLn $ "guess error: " ++ err
-          moreRandoms <- goodRandoms
-          evalRes <- evalProgramById pId moreRandoms
-          case evalRes of
-            EvalOK outputs2 -> loop (inputs++moreRandoms) (outputs++outputs2)
-            EvalError msg -> error $ "evalProgramById returned error:" ++ show msg
+          error $ "guess error: " ++ err
+          -- If we are getting "unable to decide equality", it is of no use to request more data - we generate the same solution
+          -- over and over
+          -- 
+          -- putStrLn $ "guess error: " ++ err
+          -- moreRandoms <- goodRandoms
+          -- evalRes <- evalProgramById pId moreRandoms
+          -- case evalRes of
+          --   EvalOK outputs2 -> loop (inputs++moreRandoms) (outputs++outputs2)
+          --  EvalError msg -> error $ "evalProgramById returned error:" ++ show msg
 
 
 onePos :: Word64 -> [Int]
