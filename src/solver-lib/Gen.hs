@@ -133,7 +133,10 @@ isSimpleHead Fold2Arg = True
 isSimpleHead (If (ExpC _ MainArg) (ExpC _ MainArg) c) = False -- equal to (if0 MainArg 0 c)
 isSimpleHead (If (ExpC _ Fold1Arg) (ExpC _ Fold1Arg) c) = False -- equal to (if0 Fold1Arg 0 c)
 isSimpleHead (If (ExpC _ Fold2Arg) (ExpC _ Fold2Arg) c) = False -- equal to (if0 Fold2Arg 0 c)
-isSimpleHead (If (ExpC _ (Not a)) b c) = False
+isSimpleHead (If (ExpC _ MainArg) (ExpC _ Zero) (ExpC _ MainArg)) = False -- equal to MainArg
+isSimpleHead (If (ExpC _ Fold1Arg) (ExpC _ Zero) (ExpC _ Fold1Arg)) = False -- equal to Fold1Arg
+isSimpleHead (If (ExpC _ Fold2Arg) (ExpC _ Zero) (ExpC _ Fold2Arg)) = False -- equal to Fold2Arg
+-- isSimpleHead (If (ExpC _ (Not a)) b c) = False -- meant to be equal to (if0 a c b), but it's not the case, since (Not) is not a boolean op
 isSimpleHead (If a b c) | b == c = False -- equal to b
 isSimpleHead (If a b c) = True
 
@@ -143,46 +146,53 @@ isSimpleHead (Not (ExpC _ (Not a))) = False
 isSimpleHead (Not a) = True
 
 isSimpleHead (Shl1 (ExpC _ Zero)) = False
-isSimpleHead (Shl1 (ExpC _ (Shr4 a))) = False -- symmetric to shr4 (shl1 ..)
-isSimpleHead (Shl1 (ExpC _ (Shr16 a))) = False -- symmetric to shr16 (shl1 ..)
+isSimpleHead (Shl1 (ExpC _ (Shr1 (ExpC _ (Shl1 a))))) = False -- equal to shl1 a
+isSimpleHead (Shl1 (ExpC _ (And (ExpC _ (Not (ExpC _ One))) a))) = False -- equal to shl1 a
+isSimpleHead (Shl1 (ExpC _ (And a (ExpC _ (Not (ExpC _ One)))))) = False -- equal to shl1 a
 isSimpleHead (Shl1 a) = True
 
 isSimpleHead (Shr1 (ExpC _ Zero)) = False
 isSimpleHead (Shr1 (ExpC _ One))  = False
+isSimpleHead (Shr1 (ExpC _ (Shl1 (ExpC _ (Shr1 a))))) = False -- equal to shr1 a
 isSimpleHead (Shr1 a) = True
 
 isSimpleHead (Shr4 (ExpC _ Zero)) = False
 isSimpleHead (Shr4 (ExpC _ One))  = False
-isSimpleHead (Shr4 (ExpC _ (Shr1 a))) = False
+isSimpleHead (Shr4 (ExpC _ (Shr1 a))) = False -- symmetric to shr1 (shr4 ..)
 isSimpleHead (Shr4 a) = True
 
 isSimpleHead (Shr16 (ExpC _ Zero)) = False
 isSimpleHead (Shr16 (ExpC _ One))  = False
 isSimpleHead (Shr16 (ExpC _ (Shr1 a))) = False
 isSimpleHead (Shr16 (ExpC _ (Shr4 a))) = False
+isSimpleHead (Shr16 (ExpC _ (Shr16 (ExpC _ (Shr16 (ExpC _ (Shr16 a))))))) = False -- equal to 0
 isSimpleHead (Shr16 a) = True
 
 isSimpleHead (And (ExpC _ One) (ExpC _ (Shl1 a))) = False -- equal to Zero
 isSimpleHead (And (ExpC _ (Shl1 a)) (ExpC _ One)) = False -- equal to Zero
 isSimpleHead (And (ExpC _ Zero) b) = False
 isSimpleHead (And a (ExpC _ Zero)) = False
--- Normal form: first operand must be smaller in size
-isSimpleHead (And a b) | expCSize a > expCSize b || a >= b = False
+-- Normal form: first operand must be smaller in size 
+isSimpleHead (And a b) | (expCSize a, a) > (expCSize b, b) || a == b = False
 isSimpleHead (And a b) = True
+-- TODO: And (Not 1) a, And a (Not 1) can be replaced by (shl1 (shr1 a)), but we don't know if shr1 and shl1 are available
+-- TODO: And (Not a) (Not b) can be replaced by (Not (Or a b)), but we don't know if Or is available
+-- TODO: similar for (not (and (not a) (not b))), (not (and (not a) b)), etc.
 
 isSimpleHead (Or (ExpC _ Zero) b) = False
 isSimpleHead (Or a (ExpC _ Zero)) = False
-isSimpleHead (Or a b) | expCSize a > expCSize b || a >= b = False
+isSimpleHead (Or a b) | (expCSize a, a) > (expCSize b, b) || a == b = False
+-- TODO: same considerations as for And
 isSimpleHead (Or a b) = True
 
 isSimpleHead (Xor (ExpC _ Zero) b) = False
 isSimpleHead (Xor a (ExpC _ Zero)) = False
-isSimpleHead (Xor a b) | expCSize a > expCSize b || a >= b = False
+isSimpleHead (Xor a b) | (expCSize a, a) > (expCSize b, b) || a == b = False
 isSimpleHead (Xor a b) = True
 
 isSimpleHead (Plus (ExpC _ Zero) b) = False
 isSimpleHead (Plus a (ExpC _ Zero)) = False
-isSimpleHead (Plus a b) | expCSize a > expCSize b || a >= b = False
+isSimpleHead (Plus a b) | (expCSize a, a) > (expCSize b, b) = False -- No a==b case to allow (plus x x), which might be needed if shl1 is not available
 isSimpleHead (Plus a b) = True
 
 isSimpleParts Zero = True
