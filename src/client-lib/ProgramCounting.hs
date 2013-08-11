@@ -82,21 +82,22 @@ expand (AFS n) = concat
   , [ If0 (AFS i) (AFS j) (AFS $ n-1-i-j) | isIfAllowed ?ctx, i <- [1..n-3], j <- [1..n-2-i] ]
   ]
 
-expand (AF 1) = [C0, C1, X]
-expand (AF n) | not (isFoldAllowed ?ctx) = expand (AFS n)
-              | otherwise = concat
-  [ [ op1 (AF $ n-1) | op1 <- allowedOp1 ?ctx ]
-  , [ op2 (AF i) (AF j) | op2 <- allowedOp2 ?ctx, i <- [1..n-2], let j=n-1-i, j <= i ]
-  , [ If0 (AF i) (AF j) (AF $ n-1-i-j) | isIfAllowed ?ctx, i <- [1..n-3], j <- [1..n-2-i] ]
-{- This causes duplicates, so it's rather useless
-  , [ op2 (AF i) (AFS $ n-1-i) | op2 <- allowedOp2 ?ctx, i <- [1..n-2] ]
-  , [ op2 (AFS i) (AF $ n-1-i) | op2 <- allowedOp2 ?ctx, i <- [1..n-2] ]
-  , [ If0 (af1 i) (af2 j) (af3 $ n-1-i-j) | isIfAllowed ?ctx,
-                                           (af1,af2,af3) <- [(AF,AFS,AFS), (AFS,AF,AFS), (AFS,AFS,AF)],
-                                           i <- [1..n-3], j <- [1..n-2-i] ]
--}
-  , [ Fold (AFS i) (AFS j) (UF $ n-2-i-j) | i <- [1..n-4], j <- [1..n-3-i] ]
-  ]
+expand af@(AF n) | isFoldAllowed ?ctx = expand' af
+                 | otherwise = expand (AFS n)
+  where
+    expand' :: (?ctx :: Context) => Tag -> [Tag]
+    expand' (AF 1) = []
+    expand' (AF 2) = []
+    expand' (AF 3) = []
+    expand' (AF 4) = []
+    expand' (AF n) = concat
+      [ [ op1 (AF $ n-1) | op1 <- allowedOp1 ?ctx ]
+      , [ op2 (AF i) (AFS j) | op2 <- allowedOp2 ?ctx, i <- [1..n-2], let j=n-1-i, i >= 5 ]
+      , [ If0 (AF i) (AFS j) (AFS k) | isIfAllowed ?ctx, i <- [1..n-3], j <- [1..n-2-i], let k=n-1-i-j, i >= 5 ]
+      , [ If0 (AFS i) (AF j) (AFS k) | isIfAllowed ?ctx, i <- [1..n-3], j <- [1..n-2-i], let k=n-1-i-j, j >= 5 ]
+      , [ If0 (AFS i) (AFS j) (AF k) | isIfAllowed ?ctx, i <- [1..n-3], j <- [1..n-2-i], let k=n-1-i-j, k >= 5 ]
+      , [ Fold (AFS i) (AFS j) (UF k) | i <- [1..n-4], j <- [1..n-3-i], let k=n-2-i-j ]
+      ]
 
 expand (TF 1) = [C0, C1, Y, Z]   -- can't use X!
 expand (TF n) = concat
