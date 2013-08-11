@@ -297,7 +297,6 @@ buildCaches inputs cacheSize = ICache $ AU.listArray (0,iCacheSize-1) computedVa
       where
         ?ectx = evalCtx x 0 0
   
-
 main = do
     [sizeStr] <- getArgs
     let ts = [AF n | n <- [1..42]]
