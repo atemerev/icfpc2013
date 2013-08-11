@@ -47,27 +47,27 @@ generatorTests = localOption (SmallCheckDepth 8) $ testGroup "Generation"
         fromMWord64 (error "no cached value in test") (cached prog) == eval (head bvs) undefined undefined prog
   , testProperty "Left and right zero estimates for programs are correct" $
       \n -> changeDepth (const (n-2)) $
-        over (serExpressionSC noRestriction) $ \(e, _, lz, rz) ->
+        over (serExpressionSC noRestriction) $ \(e, _, lz, rz, _) ->
           over (generate (const bvs)) $ \v ->
             let res = eval v undefined undefined e
             in  (res .&. complement (mask64 `shiftL` rz) == 0 &&
                  res .&. complement (mask64 `shiftR` lz) == 0)
   , testProperty "Left and right zero estimates for programs are correct using leftRightZeros" $
       \n -> changeDepth (const (n-2)) $
-        over (serExpressionSC noRestriction) $ \(e, _, lz, rz) ->
+        over (serExpressionSC noRestriction) $ \(e, _, lz, rz, _) ->
           over (generate (const bvs)) $ \v ->
             let res = eval v undefined undefined e
             in  (lz, rz) == leftRightZeros (expr e)
   , localOption (SmallCheckDepth 6) $ testProperty "Left constraints generate all programs that satisfy the costraint" $
       \n -> changeDepth (const n) $ do
         over (generate (\n -> [0, 1, 2, 3, 4, 5, 10, 15, 16, 20, 64])) $ \alz ->
-          let satisfyRestriction alz (e,_,_,_) = case leftRightZeros (expr e) of (lz,rz) -> lz <= alz
+          let satisfyRestriction alz (e,_,_,_,_) = case leftRightZeros (expr e) of (lz,rz) -> lz <= alz
           in (S.fromList (filter (satisfyRestriction alz) (list n (serExpressionSC noRestriction)))
                == S.fromList (list n (serExpressionSC (noRestriction {allowedZeroLeftBits = alz}))))
   , localOption (SmallCheckDepth 6) $ testProperty "Right constraints generate all programs that satisfy the costraint" $
       \n -> changeDepth (const n) $ do
         over (generate (\n -> [0, 1, 2, 3, 4, 5, 10, 15, 16, 20, 64])) $ \arz ->
-          let satisfyRestriction arz (e,_,_,_) = case leftRightZeros (expr e) of (lz,rz) -> rz <= arz
+          let satisfyRestriction arz (e,_,_,_,_) = case leftRightZeros (expr e) of (lz,rz) -> rz <= arz
           in (S.fromList (filter (satisfyRestriction arz) (list n (serExpressionSC noRestriction)))
                == S.fromList (list n (serExpressionSC (noRestriction {allowedZeroRightBits = arz}))))
   ]
