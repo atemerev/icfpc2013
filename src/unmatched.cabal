@@ -39,6 +39,10 @@ library
                   , pretty
                   , containers
                   , random
+                  , stm
+                  , async
+                  , logict
+                  , mtl
 
   hs-source-dirs:   server-api, solver-lib, client-lib
   exposed-modules:  ServerAPI
@@ -46,6 +50,8 @@ library
                   , Gen
                   , RandomBV
                   , Filter
+                  , ParSearch
+                  , ParSearch.Logic
                   , PP
                   , HsClient
                   , FileClient
@@ -66,14 +72,15 @@ executable client
                   , optparse-applicative >= 0.5.2.1
                   , smallcheck
                   , containers
+  ghc-options: -threaded
 
-executable benchmark
-  Default-language:    Haskell2010
-  hs-source-dirs:  ./test
-  main-is: benchmark.hs
-  build-depends:    base
-                  , unmatched
-                  , smallcheck
+-- executable benchmark
+--   Default-language:    Haskell2010
+--   hs-source-dirs:  ./test
+--   main-is: benchmark.hs
+--   build-depends:    base
+--                   , unmatched
+--                   , smallcheck
 
 test-suite test
   Default-language:    Haskell2010

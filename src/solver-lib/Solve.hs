@@ -7,7 +7,8 @@ import HsClient (evalProgramById, guessProgram)
 import Gen (generateRestrictedUpTo)
 import Filter (filterProgs, filterByCached)
 import PP (ppProg)
-import Control.Exception (evaluate)
+import ParSearch
+import Control.Exception
 import System.Timeout
 
 solve :: String -> Int -> [String] -> IO ()
@@ -21,7 +22,7 @@ solveExact size operations inputs outputs = do
     then putStrLn "Couldn't find any program matching conditions at all!"
     else print (head candidates)
 
-solve' :: String -> [ExpC] -> IO ()
+solve' :: String -> PS ExpC ExpC -> IO ()
 solve' progId allProgs = do
   evalRes <- evalProgramById progId bvs
   case evalRes of
@@ -33,9 +34,9 @@ solve' progId allProgs = do
       putStrLn $ "INOUTS to reproduce with client solve-exact: " ++ show (inputs, outputs)
       let
         candidates = filterProgs inputs outputs programs
-        first = if null candidates
-                then error "Couldn't find any program matching conditions at all!"
-                else head candidates
+      first <-
+        maybe (throwIO $ ErrorCall "Nothing has been found") return
+        =<< runPS candidates 4 (<= 3)
 
         -- mapM_ (putStrLn . ppProg) candidates
       print first

@@ -23,27 +23,30 @@ allTests = testGroup "Tests"
 mask64 :: Word64
 mask64 = 0xFFFFFFFFFFFFFFFF
 
+serProgSC r = generate $ \n -> serProg n r
+serExpressionSC r = generate $ \n -> serExpression' n r
+
 generatorTests = localOption (SmallCheckDepth 8) $ testGroup "Generation"
   [ testProperty "Programs have correct size" $
       \n -> changeDepth (const n) $
-        over (serProg noRestriction) $ \prog -> progSize (expr prog) == n
+        over (serProgSC noRestriction) $ \prog -> progSize (expr prog) == n
   , testProperty "Programs are valid" $
       \n -> changeDepth (const n) $
-        over (serProg noRestriction) (isValid.expr)
+        over (serProgSC noRestriction) (isValid.expr)
   , localOption (SmallCheckDepth 5) $ testProperty "Operator restrictions" $
       \n ->
       over restrictionSeries $ \ops ->
 
       S.fromList (filter (checkRestriction ops)
-        (list n (serProg noRestriction)))
-        == S.fromList (list n (serProg (restrictionFromList ops)))
+        (list n (serProgSC noRestriction)))
+        == S.fromList (list n (serProgSC (restrictionFromList ops)))
   , testProperty "Programs have correct cached value for seed" $
       \n -> changeDepth (const n) $
-        over (serProg noRestriction) $ \prog -> 
+        over (serProgSC noRestriction) $ \prog -> 
         fromMWord64 (error "no cached value in test") (cached prog) == eval (head bvs) undefined undefined prog
   , testProperty "Left and right zero estimates for programs are correct" $
       \n -> changeDepth (const (n-2)) $
-        over (serExpression' noRestriction) $ \(e, _, lz, rz) ->
+        over (serExpressionSC noRestriction) $ \(e, _, lz, rz) ->
           over (generate (const bvs)) $ \v ->
             let res = eval v undefined undefined e
             in  (res .&. complement (mask64 `shiftL` rz) == 0 &&

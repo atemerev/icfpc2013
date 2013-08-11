@@ -2,14 +2,16 @@ module Filter where
 
 import Types
 import Data.Maybe
+import Control.Monad
 
 filterProgs
-  :: [Word64] -- inputs
+  :: MonadPlus m
+  => [Word64] -- inputs
   -> [Word64] -- outputs
-  -> [ExpC] -- all programs
-  -> [ExpC] -- programs that match
+  -> m ExpC -- all programs
+  -> m ExpC -- programs that match
 filterProgs ins outs progs =
-  filter allInputsMatchAllOutputs progs
+  mfilter allInputsMatchAllOutputs progs
   where 
     allInputsMatchAllOutputs prog = 
       and $ zipWith
@@ -17,5 +19,5 @@ filterProgs ins outs progs =
         ins outs
 
 -- Filter generated list of expressions by checking if cached valued on known seed argument matches expectation
-filterByCached :: Word64 -> [ExpC] -> [ExpC]
-filterByCached expected progs = filter ((==expected).(fromMWord64 (error "no cached value in filterByCached")).cached) progs
+filterByCached :: MonadPlus m => Word64 -> m ExpC -> m ExpC
+filterByCached expected progs = mfilter ((==expected).(fromMWord64 (error "no cached value in filterByCached")).cached) progs
