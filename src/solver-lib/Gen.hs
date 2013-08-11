@@ -434,6 +434,12 @@ serIf :: (MonadLevel m, ?tfold :: Bool, ?cache :: Cache) => Bool -> Int -> Restr
 -- bonus tasks have top-level if with a b c components of roughly equal size without nested ifs
 -- "bonus" controls if we are generating this special "if"
 serIf bonus n restriction_orig@(Restriction ops alz arz) fs unknownParityOnly valueConstraint = do
+  -- If bonus, the options for XXX in the condition (if (and 1 XXX)) are:
+  --  XXX = 0
+  --  XXX = 1
+  --  XXX = MainArg
+  --  XXX = (not MainArg)
+  --  XXX = anything whose parity is PUnknown.
   let restriction@(Restriction ops alz arz) = 
         if bonus then restriction_orig `removeOpRestriction` If_op
         else restriction_orig
@@ -445,11 +451,23 @@ serIf bonus n restriction_orig@(Restriction ops alz arz) fs unknownParityOnly va
   let opsOnly = noRestriction {allowedOps = ops}
   let restrictionA = opsOnly
   let restrictionB = opsOnly
-  (a_, foldA, _, _, _) <- serExp' sizeA_ restrictionA fs False Nothing -- no constraint is possible on condition
+  (sizeA0, (a_, foldA, _, _, _)) <- do
+    if bonus
+      then msum [
+         return (1, (zero, False, 64, 64, PZero))
+       , return (1, (one, False, 63, 0, POne))
+       , return (1, (mainArg, False, 0, 0, PMain))
+       , return (2, (not_ mainArg, False, 0, 0, PNegMain))
+       , do x <- (serExp' sizeA_ restrictionA fs True Nothing)
+            return (sizeA_, x)
+       ]
+      else do x <- serExp' sizeA_ restrictionA fs False Nothing -- no constraint is possible on condition
+              return (sizeA_, x)
+  guard (sizeA0 >= a_lo && sizeA0 <= a_hi)
   let a = if bonus
           then and_ one a_
           else a_
-  let sizeA = if bonus then sizeA_ + 2 else sizeA_
+  let sizeA = if bonus then sizeA0 + 2 else sizeA0
   guard $ isSimpleHead $ expr a
   if isConstExprC a
     then mzero
