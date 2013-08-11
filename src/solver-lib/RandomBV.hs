@@ -17,5 +17,7 @@ goodRandom gen = let numBits :: Int
                      bitMask = 2^numBits - 1 :: Word64
                    in (n .&. bitMask, gen'')
 
-goodRandoms :: RandomGen g => g -> [Word64]
-goodRandoms gen = unfoldr (Just . goodRandom) gen
+goodRandoms :: IO [Word64]
+goodRandoms = do 
+  gen <- newStdGen
+  return $ take 256 $ unfoldr (Just . goodRandom) gen
