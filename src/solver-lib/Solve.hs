@@ -66,7 +66,7 @@ solve pId size operations = do
           putStrLn $ "Mismatch on " ++ show input ++ " : " ++ show actual ++ " instead of " ++ show expected
           loop (input:inputs) (expected:outputs)
         GuessError err -> do
-          error $ "guess error: " ++ err
+          putStrLn $ "guess error: " ++ err
           moreRandoms <- goodRandoms
           evalRes <- evalProgramById pId moreRandoms
           case evalRes of
