@@ -1,5 +1,5 @@
 {-# LANGUAGE ImplicitParams #-}
-module Gen (leftRightZerosUnop, leftRightZerosBinop, generateRestricted, generateRestrictedUpTo, serProg, serExpression', noRestriction, restrictionFromList, OpName(..)) where
+module Gen (leftRightZerosUnop, leftRightZerosBinop, leftRightZeros, generateRestricted, generateRestrictedUpTo, serProg, serExpression', noRestriction, restrictionFromList, OpName(..)) where
 
 import Types
 import Test.SmallCheck
@@ -29,6 +29,34 @@ leftRightZerosBinop lza rza lzb rzb Xor{} = (min lza lzb, min rza rzb)
 leftRightZerosBinop lza rza lzb rzb Plus{} = (max (min lza lzb - 1) 0, min rza rzb)
 -- If interpreted as binop over its two branches
 leftRightZerosBinop lza rza lzb rzb If{} = (min lza lzb, min rza rzb)
+
+leftRightZeros :: Exp -> (Int, Int)
+leftRightZeros Zero = (64, 64)
+leftRightZeros One = (63, 0)
+leftRightZeros MainArg = (0, 0)
+leftRightZeros Fold1Arg = (0, 0)
+leftRightZeros Fold2Arg = (0, 0)
+leftRightZeros e@(Not (ExpC _ a)) = let (lza, rza) = leftRightZeros a in leftRightZerosUnop lza rza e
+leftRightZeros e@(Shl1 (ExpC _ a)) = let (lza, rza) = leftRightZeros a in leftRightZerosUnop lza rza e
+leftRightZeros e@(Shr1 (ExpC _ a)) = let (lza, rza) = leftRightZeros a in leftRightZerosUnop lza rza e
+leftRightZeros e@(Shr4 (ExpC _ a)) = let (lza, rza) = leftRightZeros a in leftRightZerosUnop lza rza e
+leftRightZeros e@(Shr16 (ExpC _ a)) = let (lza, rza) = leftRightZeros a in leftRightZerosUnop lza rza e
+leftRightZeros e@(Fold _ _ (ExpC _ a)) = let (lza, rza) = leftRightZeros a in leftRightZerosUnop lza rza e
+leftRightZeros e@(And (ExpC _ a) (ExpC _ b)) = let (lza, rza) = leftRightZeros a
+                                                   (lzb, rzb) = leftRightZeros b
+                                               in leftRightZerosBinop lza rza lzb rzb e
+leftRightZeros e@(Or (ExpC _ a) (ExpC _ b)) = let (lza, rza) = leftRightZeros a
+                                                  (lzb, rzb) = leftRightZeros b
+                                              in leftRightZerosBinop lza rza lzb rzb e
+leftRightZeros e@(Xor (ExpC _ a) (ExpC _ b)) = let (lza, rza) = leftRightZeros a
+                                                   (lzb, rzb) = leftRightZeros b
+                                               in leftRightZerosBinop lza rza lzb rzb e
+leftRightZeros e@(Plus (ExpC _ a) (ExpC _ b)) = let (lza, rza) = leftRightZeros a
+                                                    (lzb, rzb) = leftRightZeros b
+                                                in leftRightZerosBinop lza rza lzb rzb e
+leftRightZeros e@(If _ (ExpC _ a) (ExpC _ b)) = let (lza, rza) = leftRightZeros a
+                                                    (lzb, rzb) = leftRightZeros b
+                                                in leftRightZerosBinop lza rza lzb rzb e
 
 -- Generators are restricted to allowed function set
 data OpName = Not_op | Shl1_op | Shr1_op | Shr4_op
