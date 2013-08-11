@@ -143,8 +143,6 @@ isSimpleHead (Not (ExpC _ (Not a))) = False
 isSimpleHead (Not a) = True
 
 isSimpleHead (Shl1 (ExpC _ Zero)) = False
-isSimpleHead (Shl1 (ExpC _ (Shr4 a))) = False -- symmetric to shr4 (shl1 ..)
-isSimpleHead (Shl1 (ExpC _ (Shr16 a))) = False -- symmetric to shr16 (shl1 ..)
 isSimpleHead (Shl1 a) = True
 
 isSimpleHead (Shr1 (ExpC _ Zero)) = False
