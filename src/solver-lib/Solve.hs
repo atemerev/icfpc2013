@@ -12,6 +12,7 @@ import Control.Exception
 import System.Timeout
 import Data.Bits
 import Data.List (findIndex)
+import Text.Printf
 
 basicSolve :: Int -> [String] -> [Word64] -> [Word64] -> IO (Maybe ExpC)
 basicSolve size operations inputs outputs = do
@@ -45,7 +46,7 @@ solve pId size operations = do
 
   where
     loop inputs outputs = do
-      let fname = pId++".solve-exact" 
+      let fname = printf "%s-%d.solve-exact" pId (length inputs)
       writeFile fname  $
         "client solve-exact " ++ show size ++ " "
           ++ show (unwords operations) ++ " "
