@@ -51,8 +51,14 @@ data OpName = Not_op | Shl1_op | Shr1_op | Shr4_op
             | Shr16_op | And_op | Or_op | Xor_op
             | Plus_op | If_op | Fold_op
             deriving (Eq, Ord, Show)
-type Restriction = Int
-noRestriction = 0xFFFF :: Int
+data Restriction = Restriction { allowedOps :: !Int, nonzeroLeftBits :: !Int, nonzeroRightBits :: !Int } deriving (Eq, Show)
+noRestriction = Restriction { allowedOps = 0xFFFF, nonzeroLeftBits = 0, nonzeroRightBits = 0 }
+
+hasRestriction :: Restriction -> Restriction -> Bool
+hasRestriction base elem = allowedOps base .&. allowedOps elem /= 0
+
+removeOpRestriction :: Restriction -> OpName -> Restriction
+removeOpRestriction base op = base { allowedOps = allowedOps base .&. (complement (restrictionMaskFromOp op)) }
 
 allowed restriction op = hasRestriction restriction (restrictionFromOp op)
 
@@ -60,40 +66,22 @@ allow restriction opName f =
   if allowed restriction opName then Just f else Nothing
 
 restrictionFromOp :: OpName -> Restriction
-restrictionFromOp Not_op = 1 `shiftL` 0
-restrictionFromOp Shl1_op = 1 `shiftL` 1
-restrictionFromOp Shr1_op = 1 `shiftL` 2
-restrictionFromOp Shr4_op = 1 `shiftL` 3
-restrictionFromOp Shr16_op = 1 `shiftL` 4
-restrictionFromOp And_op = 1 `shiftL` 5
-restrictionFromOp Or_op = 1 `shiftL` 6
-restrictionFromOp Xor_op = 1 `shiftL` 7
-restrictionFromOp Plus_op = 1 `shiftL` 8
-restrictionFromOp If_op = 1 `shiftL` 9
-restrictionFromOp Fold_op = 1 `shiftL` 10
+restrictionFromOp op = noRestriction { allowedOps = restrictionMaskFromOp op }
 
-mustVaryRightBit :: Restriction
-mustVaryRightBit = 1 `shiftL` 11
+restrictionMaskFromOp :: OpName -> Int
+restrictionMaskFromOp Not_op = 1 `shiftL` 0
+restrictionMaskFromOp Shl1_op = 1 `shiftL` 1
+restrictionMaskFromOp Shr1_op = 1 `shiftL` 2
+restrictionMaskFromOp Shr4_op = 1 `shiftL` 3
+restrictionMaskFromOp Shr16_op = 1 `shiftL` 4
+restrictionMaskFromOp And_op = 1 `shiftL` 5
+restrictionMaskFromOp Or_op = 1 `shiftL` 6
+restrictionMaskFromOp Xor_op = 1 `shiftL` 7
+restrictionMaskFromOp Plus_op = 1 `shiftL` 8
+restrictionMaskFromOp If_op = 1 `shiftL` 9
+restrictionMaskFromOp Fold_op = 1 `shiftL` 10
 
-mustVaryLeftBit :: Restriction
-mustVaryLeftBit = 1 `shiftL` 12
-
-mustVaryLeft4Bits :: Restriction
-mustVaryLeft4Bits = 1 `shiftL` 13
-
-mustVaryLeft16Bits :: Restriction
-mustVaryLeft16Bits = 1 `shiftL` 14
-
-restrictionFromList rs = sum $ map restrictionFromOp rs
-
-addRestriction :: Restriction -> Restriction -> Restriction
-addRestriction = (.|.)
-
-hasRestriction :: Restriction -> Restriction -> Bool
-hasRestriction base elem = base .&. elem /= 0
-
-removeRestriction :: Restriction -> Restriction -> Restriction
-removeRestriction base elem = base .&. (complement elem)
+restrictionFromList rs = noRestriction { allowedOps = sum $ map restrictionMaskFromOp rs }
 
 isSimpleC :: ExpC -> Bool
 isSimpleC ec = isSimple (expr ec)
@@ -219,7 +207,7 @@ generateRestricted' tfold n restriction =
                                       | i <- [cacheMin .. min n cacheMax]
                                       ]
       let ?cache = filledCache
-      (e, _, _, _) <- serExp' n (restriction `removeRestriction` (restrictionFromOp Fold_op)) InFoldBody -- Fold should not be there, but remove it just in case
+      (e, _, _, _) <- serExp' n (restriction `removeOpRestriction` Fold_op) InFoldBody -- Fold should not be there, but remove it just in case
       guard $ usesFold2Arg e && usesFold1Arg e -- since initial value for acc in tfold is known, bodies that use just acc are not interesting
       return e
 
@@ -290,7 +278,7 @@ serExp' 3 restriction fs = msum $ concat [
   map (\op -> serBinop 3 restriction fs op) (allowedBinaryOps restriction)]
 serExp' n restriction fs = msum $ concat [
   if (n >= 4 && allowedIf restriction) then [serIf n restriction fs] else [],
-  if (n >= 5 && fs == NoFold && allowedFold restriction) then [serFold n (restriction `removeRestriction` (restrictionFromOp Fold_op))] else [],
+  if (n >= 5 && fs == NoFold && allowedFold restriction) then [serFold n (restriction `removeOpRestriction` Fold_op)] else [],
   map (\op -> serUnop n restriction fs op) (allowedUnaryOps restriction),
   map (\op -> serBinop n restriction fs op) (allowedBinaryOps restriction)]
 
