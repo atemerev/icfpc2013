@@ -204,8 +204,7 @@ isSimpleParts (Plus a b) = isSimpleC a && isSimpleC b
 
 generateRestrictedUpTo :: MonadLevel m => Int -> [String] -> (Int, Int) -> m ExpC -- allowed ops are passed as string list
 generateRestrictedUpTo n rst (alz, arz) = 
-  let lower_bound = if "bonus" `elem` rst then n else 1
-   in elements [lower_bound..n] >>= \i -> generateRestricted i rst (alz, arz)
+  elements [1..n] >>= \i -> generateRestricted i rst (alz, arz)
 
 generateRestricted :: MonadLevel m => Int -> [String] -> (Int, Int) -> m ExpC -- allowed ops are passed as string list
 generateRestricted n rst (alz, arz) = 
@@ -352,25 +351,27 @@ serIf bonus n restriction_orig@(Restriction ops alz arz) fs = do
         if bonus then restriction_orig `removeOpRestriction` If_op
         else restriction_orig
   let (a_lo, a_hi) = 
-        if bonus then if n < 30 then (4,7) else (9,13)
+        if bonus then if n < 30 then (min (n-3) 4,min (n-3) 7) else (9,13)
         else (1,n-3)
-  sizeA <- elements [a_lo, a_hi]
+  sizeA_ <- elements [a_lo, a_hi]
   let opsOnly = noRestriction {allowedOps = ops}
   let restrictionA = opsOnly
   let restrictionB = opsOnly
-  (a_, foldA, _, _) <- serExp' sizeA restrictionA fs
+  (a_, foldA, _, _) <- serExp' sizeA_ restrictionA fs
   let a = if bonus
           then and_ one a_
           else a_
+  let sizeA = if bonus then sizeA_ + 2 else sizeA
   guard $ isSimpleHead $ expr a
   if isConstExprC a
     then mzero
     else do
       let (b_lo, b_hi) = if bonus 
-                         then (if n < 30 then (5,9) else (9,15))
+                         then (if n < 30 then (min (n-2-sizeA) 5,min (n-2-sizeA) 9) else (9,15))
                          else (1,n - 2 - sizeA)
       sizeB <- elements [b_lo..b_hi]
       let sizeC = n - 1 - sizeA - sizeB
+      guard $ sizeC >= 1
       (b, foldB, lzb, rzb) <- serExp' sizeB restrictionB (if foldA then ExternalFold else fs)
       -- Respecting restriction "at most alz constant-zero bits allowed in if(..) b else c":
       -- Assume b guarantees lzb left zero bits. If lzb <= alz, we're fine - no restriction on c.
