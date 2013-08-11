@@ -27,6 +27,7 @@ numLeftZeros x = 63 - maximum (onePos x)
 solveExact :: Int -> [String] -> [Word64] -> [Word64] -> IO ()
 solveExact size operations inputs outputs = do
   let (alz, arz) = (minimum $ map numLeftZeros outputs, minimum $ map numRightZeros outputs)
+  putStrLn ("RESTRICTION: allowed left/right zeros: " ++ show (alz, arz))
   let programs = generateRestrictedUpTo size operations (alz, arz)
   let candidates = filterProgs inputs outputs programs
   if null candidates
