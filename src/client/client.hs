@@ -17,6 +17,7 @@ import PP (ppProg)
 import Data.Word
 import Filter
 import Data.Maybe
+import Data.Time.Clock
 
 data Cmd = MyProblems
          | Status
@@ -100,6 +101,7 @@ run (SolveMany offset limit tmout bySize includeBonuses) = do
     
     trySolve [] =  putStrLn "All done!"
     trySolve (p:ps) = do
+      print <$> getCurrentTime
       putStrLn $ printf ">>> Trying %s, size %d, operations (%s)" (problemId p) (problemSize p) (intercalate " " $ operators p)
       solveWithTimeout tmout (problemId p) (problemSize p) (operators p)
       trySolve ps
