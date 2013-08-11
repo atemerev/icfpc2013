@@ -205,9 +205,10 @@ generateRestrictedUpTo n rst (alz, arz) = elements [1..n] >>= \i -> generateRest
 
 generateRestricted :: MonadLevel m => Int -> [String] -> (Int, Int) -> m ExpC -- allowed ops are passed as string list
 generateRestricted n rst (alz, arz) = 
-  generateRestricted' tfold n restriction
+  generateRestricted' bonus tfold n restriction
   where
     tfold = "tfold" `elem` rst
+    bonus = "bonus" `elem` rst
     restriction = restriction0 { allowedZeroLeftBits = alz, allowedZeroRightBits = arz }
     restriction0 = restrictionFromList $ map parse $ filter (/="bonus") $ filter (/="tfold") rst
     parse "not" = Not_op
@@ -223,13 +224,16 @@ generateRestricted n rst (alz, arz) =
     parse "fold" = Fold_op
     parse other = error $ "failed to parse operation " ++ other
 
-generateRestricted' :: MonadLevel m => Bool -> Int -> Restriction -> m ExpC
-generateRestricted' tfold n restriction = 
-  if tfold
-  then
-    let ?tfold = True
-    in (\e -> fold_ mainArg zero e) `liftM` foldBodies (n-5) -- |fold x 0| is 2 + 1 + 1, hence n-4, and another -1 for top-level lambda
-  else serProg n restriction
+generateRestricted' :: MonadLevel m => Bool -> Bool -> Int -> Restriction -> m ExpC
+generateRestricted' bonus tfold n restriction = 
+  if bonus
+  then undefined
+  else    
+    if tfold
+    then
+      let ?tfold = True
+      in (\e -> fold_ mainArg zero e) `liftM` foldBodies (n-5) -- |fold x 0| is 2 + 1 + 1, hence n-4, and another -1 for top-level lambda
+    else serProg n restriction
   where
     foldBodies :: (?tfold :: Bool, MonadLevel m) => Int -> m ExpC
     foldBodies n = do
