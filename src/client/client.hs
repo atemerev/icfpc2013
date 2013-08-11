@@ -29,7 +29,7 @@ data Cmd = MyProblems
          | TrainSolve Int
          | Solve Int String String
          | Filter String String
-         | SolveMany Int Int Int Bool
+         | SolveMany Int Int Int Bool Bool
          | LowLevelSolve String Int [String]
          | SolveExact Int [String] ([Word64], [Word64])
          | FilterCached Int [String] Word64
@@ -88,8 +88,9 @@ run (SolveExact size ops (ins, outs)) = solveExact size ops ins outs
 
 run (Filter problemsFile idsFile) = FC.filterByIds problemsFile idsFile >>= putStrLn
   
-run (SolveMany offset limit tmout bySize) = do
-  problems <- HC.getUnsolved
+run (SolveMany offset limit tmout bySize includeBonuses) = do
+  problemsUnfiltered <- HC.getUnsolved
+  let problems = if includeBonuses then problemsUnfiltered else filter (not.("bonus" `elem`).operators) problemsUnfiltered
   let workload = take limit $ drop offset $ sortProblems problems
   trySolve workload
   where
@@ -212,6 +213,7 @@ realSolveMany= SolveMany <$> (read <$> strOption (metavar "OFFSET" <> long "offs
                          <*> (read <$> strOption (metavar "LIMIT" <> long "limit"))
                          <*> (read <$> strOption (metavar "TIMEOUT" <> long "timeout"))
                          <*> (switch (long "by-size" <> help "order tasks by size, not by complexity (faster)" <> value False))
+                         <*> (switch (long "include-bonuses" <> help "include bonus tasks" <> value False))
 
 filterProblems = Filter <$> argument str (metavar "MYPROBLEMS-FILE")
                         <*> argument str (metavar "IDS-FILE")
