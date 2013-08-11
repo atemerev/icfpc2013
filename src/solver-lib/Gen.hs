@@ -377,7 +377,7 @@ serIf bonus n restriction_orig@(Restriction ops alz arz) fs valueConstraint = do
   let a = if bonus
           then and_ one a_
           else a_
-  let sizeA = if bonus then sizeA_ + 2 else sizeA
+  let sizeA = if bonus then sizeA_ + 2 else sizeA_
   guard $ isSimpleHead $ expr a
   if isConstExprC a
     then mzero
