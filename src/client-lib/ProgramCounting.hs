@@ -71,14 +71,14 @@ expand :: (?ctx :: Context) => Tag -> [Tag]
 expand (UF 1) = [C0, C1, X, Y, Z]
 expand (UF n) = concat
   [ [ op1 (UF $ n-1) | op1 <- allowedOp1 ?ctx ]
-  , [ op2 (UF i) (UF $ n-1-i) | op2 <- allowedOp2 ?ctx, i <- [1..n-2] ]
+  , [ op2 (UF i) (UF j) | op2 <- allowedOp2 ?ctx, i <- [1..n-2], let j = n-1-i, j <= i ]
   , [ If0 (UF i) (UF j) (UF $ n-1-i-j) | isIfAllowed ?ctx, i <- [1..n-3], j <- [1..n-2-i] ]
   ]
 
 expand (AFS 1) = [C0, C1, X]
 expand (AFS n) = concat
   [ [ op1 (AFS $ n-1) | op1 <- allowedOp1 ?ctx ]
-  , [ op2 (AFS i) (AFS $ n-1-i) | op2 <- allowedOp2 ?ctx, i <- [1..n-2] ]
+  , [ op2 (AFS i) (AFS j) | op2 <- allowedOp2 ?ctx, i <- [1..n-2], let j=n-1-i, j <= i ]
   , [ If0 (AFS i) (AFS j) (AFS $ n-1-i-j) | isIfAllowed ?ctx, i <- [1..n-3], j <- [1..n-2-i] ]
   ]
 
@@ -86,7 +86,7 @@ expand (AF 1) = [C0, C1, X]
 expand (AF n) | not (isFoldAllowed ?ctx) = expand (AFS n)
               | otherwise = concat
   [ [ op1 (AF $ n-1) | op1 <- allowedOp1 ?ctx ]
-  , [ op2 (AF i) (AF $ n-1-i) | op2 <- allowedOp2 ?ctx, i <- [1..n-2] ]
+  , [ op2 (AF i) (AF j) | op2 <- allowedOp2 ?ctx, i <- [1..n-2], let j=n-1-i, j <= i ]
   , [ If0 (AF i) (AF j) (AF $ n-1-i-j) | isIfAllowed ?ctx, i <- [1..n-3], j <- [1..n-2-i] ]
 {-
   , [ op2 (AF i) (AFS $ n-1-i) | op2 <- allowedOp2 ?ctx, i <- [1..n-2] ]
@@ -101,9 +101,10 @@ expand (AF n) | not (isFoldAllowed ?ctx) = expand (AFS n)
 expand (TF 1) = [C0, C1, Y, Z]   -- can't use X!
 expand (TF n) = concat
   [ [ op1 (TF $ n-1) | op1 <- allowedOp1 ?ctx ]
-  , [ op2 (TF i) (TF $ n-1-i) | op2 <- allowedOp2 ?ctx, i <- [1..n-2] ]
+  , [ op2 (TF i) (TF j) | op2 <- allowedOp2 ?ctx, i <- [1..n-2], let j=n-1-i, j <= i ]
   , [ If0 (TF i) (TF j) (TF $ n-1-i-j) | isIfAllowed ?ctx, i <- [1..n-3], j <- [1..n-2-i] ]
   ]
+
 expand C0 = [C0]
 expand C1 = [C1]
 expand X = [X]
