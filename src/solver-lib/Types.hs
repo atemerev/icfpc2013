@@ -8,7 +8,6 @@ module Types
   , fromMWord64
   , isNothing64
   , eval
-  , evalOnSeed
   , isConstExpr
   , isConstExprC
   , progSize

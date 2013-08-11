@@ -308,7 +308,7 @@ serExp' n _ _ _ | n < 1 = mzero
 serExp' 1 (Restriction _ alz arz) InFoldBody valueConstraint = do
   let maybeZero = if alz == 64 && arz == 64 && maybe True (==0) valueConstraint then return (zero, False, 64, 64) else mzero
   let maybeOne  = if alz >= 63 && maybe True (==1) valueConstraint then return (one, False, 63, 0) else mzero
-  let maybeMainArg = if maybe True (==(fromMWord64 (error "boo") $ evalOnSeed nothing64 nothing64 MainArg)) valueConstraint then return (mainArg, False, 0, 0) else mzero
+  let maybeMainArg = if maybe True (==(fromMWord64 (error "boo") $ cached mainArg)) valueConstraint then return (mainArg, False, 0, 0) else mzero
   if ?tfold
   -- zero is allowed if alz == 64 && arz == 64
   -- one is allowed if alz >= 63
@@ -318,7 +318,7 @@ serExp' 1 (Restriction _ alz arz) InFoldBody valueConstraint = do
 serExp' 1 (Restriction _ alz arz) _ valueConstraint = do
   let maybeZero = if alz == 64 && arz == 64 && maybe True (==0) valueConstraint then return (zero, False, 64, 64) else mzero
   let maybeOne  = if alz >= 63 && maybe True (==1) valueConstraint then return (one, False, 63, 0) else mzero
-  let maybeMainArg = if maybe True (==(fromMWord64 (error "boo") $ evalOnSeed nothing64 nothing64 MainArg)) valueConstraint then return (mainArg, False, 0, 0) else mzero
+  let maybeMainArg = if maybe True (==(fromMWord64 (error "boo") $ cached mainArg)) valueConstraint then return (mainArg, False, 0, 0) else mzero
   msum [maybeZero, maybeOne, maybeMainArg]
 serExp' 2 restriction fs valueConstraint = msum $ map (\op -> serUnop 2 restriction fs op valueConstraint) (allowedUnaryOps restriction)
 serExp' n restriction@(Restriction _ alz arz) fs valueConstraint
@@ -326,7 +326,7 @@ serExp' n restriction@(Restriction _ alz arz) fs valueConstraint
   -- If we need to get entries which are allowed to zero at most alz bits, then omit entries which all zero 
   | Just es <- M.lookup (n, fs) ?cache = 
     let fitsConstraint e = 
-          let eVal = evalOnSeed nothing64 nothing64 (expr e)
+          let eVal = cached e
               in if isNothing64 eVal then True else maybe True (==(fromMWord64 (error "zoo") eVal)) valueConstraint
     in
      elements (filter (\(e, _, lz, rz) -> lz <= alz && rz <= arz && fitsConstraint e ) es)
@@ -352,7 +352,7 @@ serIf n restriction@(Restriction ops alz arz) fs valueConstraint = do
     else do
       sizeB <- elements [1..n - 2 - sizeA]
       let sizeC = n - 1 - sizeA - sizeB
-      let aVal = evalOnSeed nothing64 nothing64 (expr a)
+      let aVal = cached a
       let (bValueConstraint, cValueConstraint) = 
             if isNothing64 aVal then (Nothing, Nothing)
             else if 0 == (fromMWord64 (error "too") aVal) then (valueConstraint, Nothing) else (Nothing, valueConstraint)
@@ -474,7 +474,7 @@ serBinop n restriction@(Restriction ops alz arz) fs op valueConstraint = level $
     else do
       (a, foldA, lza, rza) <- serExp' sizeA restrictionA fs Nothing -- TODO
       guard $ expr a /= Zero -- all binary ops (and, or, xor, plus) are stupid if first arg is zero
-      let aValue' =  evalOnSeed nothing64 nothing64 (expr a) -- pretend that we do not know about fold args (even if we do)
+      let aValue' =  cached a
       let aValue = if isNothing64 aValue' then Nothing else Just (fromMWord64 (error "foo") aValue')
       let (alzB, arzB) = case op of {
           And_op  -> (alz, arz)
