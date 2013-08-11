@@ -4,7 +4,7 @@ import System.Environment
 import Options.Applicative
 import ServerAPI (OpLimit(..),Problem(..), TrainingResponse(..))
 import StringClient as SC (getMyproblems, getStatus, getTrainingProblem, evalProgram, evalProgramById, guessProgram)
-import FileClient as FC (getUnsolved, getUnsolvedHS, filterByIds)
+import FileClient as FC (getUnsolved, getUnsolvedHS, filterByIds, getMyproblemsHS)
 import HsClient as HC (getTrainingProblem, getUnsolved)
 import ProgramCounting as PC (expectedComplexity)
 import Gen
@@ -16,6 +16,7 @@ import Solve (solve, isFeasible, solveExact)
 import PP (ppProg)
 import Data.Word
 import Filter
+import Data.Maybe
 
 data Cmd = MyProblems
          | Status
@@ -33,6 +34,7 @@ data Cmd = MyProblems
          | SolveExact Int [String] ([Word64], [Word64])
          | FilterCached Int [String] Word64
          | EstimateComplexity Int [String]
+         | ReportComplexity String Bool
            
 main = do
   hSetBuffering stdout NoBuffering
@@ -104,6 +106,15 @@ run (FilterCached size ops expected) = mapM_ (putStrLn.ppProg) $ filterByCached 
 
 run (EstimateComplexity size operations) = putStrLn $ show $ PC.expectedComplexity operations size
 
+run (ReportComplexity fname all) = do
+  problems <- if all then FC.getMyproblemsHS fname else FC.getUnsolvedHS fname
+  mapM_ report $ sortBy (comparing fst) $ zip (map complexity problems) problems
+  where
+    complexity p = PC.expectedComplexity (operators p) (problemSize p)
+    report :: (Integer,Problem) -> IO ()
+    report (c,p) = putStrLn $ printf "%s|%s|%d|%s|%0.5f" (maybe "not" (\b -> if b then "yes" else "not")  $ solved p) 
+                   (problemId p) (problemSize p) (intercalate " " $ operators p) ((log $ fromIntegral c) :: Double)
+
 options = info (clientOptions <**> helper) idm
 
 clientOptions = 
@@ -156,6 +167,9 @@ clientOptions =
   <> command "estimate-complexity"
     (info estimateComplexity
      (progDesc "Estimate complexity of a problem, based on its SIZE and OPERATIONS"))
+  <> command "report-complexity"
+    (info reportComplexity
+     (progDesc "Report all problems in the order of their complexity"))
   )
 
 train = Train <$> (fmap read <$> ( optional $ strOption (metavar "LENGTH" <> short 'l' <> long "length")))
@@ -201,3 +215,6 @@ filterProblems = Filter <$> argument str (metavar "MYPROBLEMS-FILE")
 
 estimateComplexity = EstimateComplexity <$> (read <$> argument str (metavar "SIZE"))
                                         <*> (words <$> (argument str (metavar "OPERATIONS")))
+
+reportComplexity = ReportComplexity <$> (argument str (metavar "FILE"))
+                                    <*> (switch (long "all" <> help "all tasks, not just unsolved" <> value False))

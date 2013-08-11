@@ -23,7 +23,7 @@ import Text.Printf
 import Data.Bits
 import Data.Word
 
-size = 30
+size = 43
 
 --inFoldExprCount, topLevelNoFoldCount, topLevelCount, tfoldCount :: Array Int Integer
 
@@ -197,11 +197,13 @@ evalCtx x y z = ECtx { x = x, y = y, z = z }
 -- Example:
 -- > expectedComplexity (words "not shl1 shr1 shr4 shr16 and or xor plus if0 fold tfold") 16
 expectedComplexity :: [String] -> Int -> Integer
-expectedComplexity operations size = let ?ctx = newContext op1 op2 ifOk foldOk in
-                                       sum (map countTag tags)
+expectedComplexity operations size_ =
+  if size_ > size then error "increase size in ProgramCounting.hs"
+  else let ?ctx = newContext op1 op2 ifOk foldOk in
+          sum (map countTag tags)
   where
-    tags | isTFold = [ TF i | i <- [1..size-4] ]
-         | otherwise = [ AF i | i <- [1..size] ]
+    tags | isTFold = [ TF i | i <- [1..size_-4] ]
+         | otherwise = [ AF i | i <- [1..size_] ]
     addOp :: String -> a -> [a] -> [a]
     addOp op v vs | op `elem` operations = v:vs
                   | otherwise = vs
