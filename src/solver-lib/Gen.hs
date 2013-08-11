@@ -205,9 +205,10 @@ generateRestrictedUpTo n rst (alz, arz) = elements [1..n] >>= \i -> generateRest
 
 generateRestricted :: MonadLevel m => Int -> [String] -> (Int, Int) -> m ExpC -- allowed ops are passed as string list
 generateRestricted n rst (alz, arz) = 
-  generateRestricted' tfold n restriction
+  generateRestricted' bonus tfold n restriction
   where
     tfold = "tfold" `elem` rst
+    bonus = "bonus" `elem` rst
     restriction = restriction0 { allowedZeroLeftBits = alz, allowedZeroRightBits = arz }
     restriction0 = restrictionFromList $ map parse $ filter (/="bonus") $ filter (/="tfold") rst
     parse "not" = Not_op
@@ -223,13 +224,21 @@ generateRestricted n rst (alz, arz) =
     parse "fold" = Fold_op
     parse other = error $ "failed to parse operation " ++ other
 
-generateRestricted' :: MonadLevel m => Bool -> Int -> Restriction -> m ExpC
-generateRestricted' tfold n restriction = 
-  if tfold
-  then
-    let ?tfold = True
-    in (\e -> fold_ mainArg zero e) `liftM` foldBodies (n-5) -- |fold x 0| is 2 + 1 + 1, hence n-4, and another -1 for top-level lambda
-  else serProg n restriction
+generateRestricted' :: MonadLevel m => Bool -> Bool -> Int -> Restriction -> m ExpC
+generateRestricted' bonus tfold n restriction = 
+  if bonus
+  then do (e,_,_,_) <- 
+            let ?cache = M.empty
+                ?tfold = False
+            in
+             serIfAnd1 n restriction ExternalFold
+          return e
+  else
+    if tfold
+    then
+      let ?tfold = True
+      in (\e -> fold_ mainArg zero e) `liftM` foldBodies (n-5) -- |fold x 0| is 2 + 1 + 1, hence n-4, and another -1 for top-level lambda
+    else serProg n restriction
   where
     foldBodies :: (?tfold :: Bool, MonadLevel m) => Int -> m ExpC
     foldBodies n = do
@@ -322,16 +331,33 @@ serExp' n restriction fs = msum $ concat [
   map (\op -> serUnop n restriction fs op) (allowedUnaryOps restriction),
   map (\op -> serBinop n restriction fs op) (allowedBinaryOps restriction)]
 
-serIf :: (MonadLevel m, ?tfold :: Bool, ?cache :: Cache) => Int -> Restriction -> FoldState -> m (ExpC, Bool, Int, Int)
-serIf n restriction@(Restriction ops alz arz) fs = do
-  sizeA <- elements [1..n - 3]
+serIfAnd1 :: (MonadLevel m, ?tfold :: Bool, ?cache :: Cache) => Int -> Restriction -> FoldState -> m (ExpC, Bool, Int, Int)
+serIfAnd1 n restriction@(Restriction ops alz arz) fs = do
+  -- generate (if0 (and 1 ...) ... ...) as top-level form for bonus tasks
+  sizeA <- elements [1..n - 3 - 1 - 1] -- -1 for and and -1 for 1
   let opsOnly = noRestriction {allowedOps = ops}
   let restrictionA = opsOnly
   let restrictionB = opsOnly
   (a, foldA, _, _) <- serExp' sizeA restrictionA fs
   if isConstExprC a
     then mzero
-    else do
+    else serIfCommon n restriction fs (and_ one a) foldA (sizeA+2)
+
+serIf :: (MonadLevel m, ?tfold :: Bool, ?cache :: Cache) => Int -> Restriction -> FoldState -> m (ExpC, Bool, Int, Int)
+serIf n restriction@(Restriction ops alz arz) fs = do
+  sizeA <- elements [1..n - 3]
+  let opsOnly = noRestriction {allowedOps = ops}
+  let restrictionA = opsOnly
+  (a, foldA, _, _) <- serExp' sizeA restrictionA fs
+  if isConstExprC a
+    then mzero
+    else serIfCommon n restriction fs a foldA sizeA
+    
+serIfCommon :: (MonadLevel m, ?tfold :: Bool, ?cache :: Cache) => Int -> Restriction -> FoldState -> 
+               ExpC -> Bool -> Int -> m (ExpC, Bool, Int, Int)
+serIfCommon n restriction@(Restriction ops alz arz) fs a foldA sizeA = do    
+      let opsOnly = noRestriction {allowedOps = ops}
+      let restrictionB = opsOnly
       sizeB <- elements [1..n - 2 - sizeA]
       let sizeC = n - 1 - sizeA - sizeB
       (b, foldB, lzb, rzb) <- serExp' sizeB restrictionB (if foldA then ExternalFold else fs)
