@@ -81,7 +81,9 @@ solveExact size operations inputs outputs = do
   result <- basicSolve size operations inputs outputs
   case result of
     Nothing -> putStrLn "Couldn't find any program matching conditions at all!"
-    Just v -> print v
+    Just v -> do
+      print v
+      printf "(size: %d)\n" $ expCSize v
 
 -- Check if it is feasible to solve this problem by brute-force within 'timeout' seconds
 isFeasible :: Int -> Problem -> IO (Maybe ())
