@@ -1,4 +1,4 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, FlexibleContexts #-}
 module ParSearch
   ( PS
   , runPS
@@ -10,8 +10,16 @@ import Control.Applicative
 import Control.Concurrent.Async
 import Control.Concurrent.STM
 import Control.Exception
+import qualified Data.IntSet as S
 
+import GHC.Conc
 import ParSearch.Logic
+--import Debug.Trace
+import Text.Printf
+
+{-# INLINE traceIO #-}
+traceIO :: String -> IO ()
+traceIO _ = return ()
 
 class MonadPlus m => MonadLevel m where
   level :: m a -> m a
@@ -19,13 +27,19 @@ class MonadPlus m => MonadLevel m where
 instance MonadLevel [] where
   level = id
 
-data PSEnv = PSEnv
+data PSEnvOuter = PSEnvOuter
   { curLevel :: !Int
   , parallelP :: Int -> Bool
-  , semaphore :: TVar Int
+  }
+data PSEnvInner = PSEnvInner
+  { freePriority :: TVar Int -- feel free to fetch this priority and increment the counter
+  , ourPriority :: Int
+  , executingPriority :: TVar (Int, S.IntSet)
+    -- priorities <= this may execute right now
+    -- plus a set holding currently executing priorities
   }
 
-newtype PS r a = PS { unPS :: ReaderT PSEnv (LogicT (Maybe r) IO) a }
+newtype PS r a = PS { unPS :: ReaderT PSEnvOuter (LogicT (Maybe r) (ReaderT PSEnvInner IO)) a }
   deriving (Functor, Applicative, Monad)
 
 runPS
@@ -34,8 +48,9 @@ runPS
   -> (Int -> Bool) -- on which levels do we parallelize?
   -> IO (Maybe a)
 runPS ps threads pp = do
-  sem <- atomically $ newTVar threads
-  searchIO $ runReaderT (unPS ps) (PSEnv 1 pp sem)
+  ep <- atomically $ newTVar (threads, S.singleton 1)
+  fp <- atomically $ newTVar 2
+  runReaderT (searchIO $ runReaderT (unPS ps) (PSEnvOuter 1 pp)) (PSEnvInner fp 1 ep)
 
 instance MonadLevel (PS r) where
   -- increase level
@@ -48,52 +63,97 @@ instance Alternative (PS r) where
 instance MonadPlus (PS r) where
   mzero = PS mzero
 
-  PS a `mplus` PS b = PS $ do
-    env <- ask
+  a `mplus` b = do
+    env <- PS ask
     if parallelP env (curLevel env)
       then
-        do
-        lift $ searchInParallel (semaphore env) (runReaderT a env) (runReaderT b env)
-      else a `mplus` b
+        searchInParallel a b
+      else PS $ unPS a `mplus` unPS b
 
 searchInParallel
-  :: TVar Int
-  -> LogicT (Maybe r) IO a
-  -> LogicT (Maybe r) IO a
-  -> LogicT (Maybe r) IO a
-searchInParallel sem la lb = LogicT $ \sk fk -> do
-  yieldSemaphore sem $
-    withAsync (searchIOBounded sem la sk fk) $ \asa ->
-    withAsync (searchIOBounded sem lb sk fk) $ \asb -> do
-    ei <- waitEither asa asb
-    case ei of
-      Left (Just v) -> return $ Just v
-      Right (Just v) -> return $ Just v
-      Left Nothing ->
-        wait asb
-      Right Nothing ->
-        wait asa
+  :: PS r a
+  -> PS r a
+  -> PS r a
+searchInParallel la lb =
+  PS $
+  ReaderT $ \envOuter ->
+  LogicT $ \sk fk ->
+  ReaderT $ \envInner -> do
+    { let toIO a = runReaderT (mkThread $ rmLogic envOuter sk (return Nothing {-XXX-}) a) envInner
+    ; runReaderT yieldPriority envInner
+    ; withAsync (toIO la) $ \asa ->
+      withAsync (toIO lb) $ \asb -> do
+      ei <- waitEither asa asb
+      case ei of
+        Left (Just v) -> return $ Just v
+        Right (Just v) -> return $ Just v
+        _ -> do
+          r <-
+            wait
+              (case ei of
+                Left Nothing -> asb
+                Right Nothing -> asa)
+          case r of
+            Just v -> return $ Just v
+            Nothing -> runReaderT (mkThread fk) envInner
+    }
 
-searchIO :: LogicT (Maybe a) IO a -> IO (Maybe a)
+-- remove the Logic layer from the stack
+-- rmLogic :: PS a -> ReaderT PSEnv IO a
+rmLogic envOuter sk fk ps = runLogicT (runReaderT (unPS ps) envOuter) sk fk
+
+-- searchIO :: LogicT (Maybe a) IO a -> IO (Maybe a)
+searchIO :: Monad m => LogicT (Maybe a) m a -> m (Maybe a)
 searchIO a = runLogicT a (\x cont -> return $ Just x) (return Nothing)
 
-searchIOBounded :: TVar Int -> LogicT r IO a -> (a -> IO r -> IO r) -> IO r -> IO r
-searchIOBounded sem a sk fk = withSemaphore sem $
-  evaluate =<< runLogicT a sk fk
+fetchPriority :: (MonadIO m, MonadReader PSEnvInner m) => m Int
+fetchPriority = do
+  pvar <- asks freePriority
+  liftIO $ atomically $ do
+    p <- readTVar pvar
+    writeTVar pvar $! p+1
+    return p
 
-withSemaphore sem a =
-  bracket_ acquire release a
-  where
-    acquire = atomically $ do
-      caps <- readTVar sem
-      if caps > 0
-        then
-          writeTVar sem (caps - 1)
-        else retry
-    release = atomically $ modifyTVar' sem (+1)
+yieldPriority :: (MonadIO m, MonadReader PSEnvInner m) => m ()
+yieldPriority = do
+  our <- asks ourPriority
+  ep <- asks executingPriority
+  liftIO $ join $ atomically $ do
+    (cur, set) <- readTVar ep
+    if our `S.member` set
+      then do
+        let set' = S.delete our set
+        writeTVar ep (cur+1, set')
+        return $
+          traceIO $ printf "Yield priority from %d: now (%d, %s)" our (cur+1) (show $ S.toList set')
+      else
+        return $ traceIO $ printf "%d: yieldPriority: not on the list" our
 
-yieldSemaphore sem a =
-  bracket_ release acquire a
-  where
-    acquire = atomically $ modifyTVar' sem (subtract 1)
-    release = atomically $ modifyTVar' sem (+1)
+mkThread :: ReaderT PSEnvInner IO a -> ReaderT PSEnvInner IO a
+mkThread a = ReaderT $ \penv -> do
+  myp <- runReaderT fetchPriority penv
+  let
+    parent = ourPriority penv
+    env = penv { ourPriority = myp }
+  (do
+    traceIO $ printf "Got priority %d (parent = %d)" myp parent
+    myThreadId >>= \i -> labelThread i (show myp)
+      -- wait for execution
+    let ep = executingPriority env
+    traceIO $ printf "%d: now sleeping" myp
+    (join $ atomically $ do
+      (curp, set) <- readTVar ep
+      if myp <= curp
+        then do
+          let set' = S.insert myp set
+          writeTVar ep (curp, set')
+          return $
+            traceIO $ printf "Priority %d: start execution %s" myp (show (curp,S.toList set'))
+        else retry)
+        `catch` \e -> do traceIO (printf "%d: caught %s" (show (e :: SomeException))); throwIO e
+
+    -- execute
+    traceIO (printf "%d: about to start" myp)
+    r <- (evaluate =<< runReaderT a env)
+
+    return r) `finally` (traceIO (printf "%d: finally finish" myp) >> runReaderT yieldPriority env)

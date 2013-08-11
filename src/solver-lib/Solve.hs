@@ -21,7 +21,7 @@ basicSolve size operations inputs outputs = do
   let
     programs = generateRestrictedUpTo size operations (alz, arz) (Just seedOutput)
     candidates = filterProgs inputs outputs $ filterByCached seedOutput programs
-  runPS candidates 4 (const False)
+  runPS candidates 2 (== 1)
   where
     seed = head bvs
     seedOutput = 
@@ -59,6 +59,7 @@ solve pId size operations = do
         -- mapM_ (putStrLn . ppProg) candidates
       print first
       putStrLn $ ppProg first
+      printf "(size: %d)\n" $ expCSize first
       gr <- guessProgram pId (ppProg first)
       case gr of
         Win -> print gr
@@ -81,7 +82,9 @@ solveExact size operations inputs outputs = do
   result <- basicSolve size operations inputs outputs
   case result of
     Nothing -> putStrLn "Couldn't find any program matching conditions at all!"
-    Just v -> print v
+    Just v -> do
+      print v
+      printf "(size: %d)\n" $ expCSize v
 
 -- Check if it is feasible to solve this problem by brute-force within 'timeout' seconds
 isFeasible :: Int -> Problem -> IO (Maybe ())
