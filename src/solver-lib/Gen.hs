@@ -351,7 +351,7 @@ serIf bonus n restriction_orig@(Restriction ops alz arz) fs = do
         if bonus then restriction_orig `removeOpRestriction` If_op
         else restriction_orig
   let (a_lo, a_hi) = 
-        if bonus then if n < 30 then (min (n-3) 4,min (n-3) 7) else (9,13)
+        if bonus then if n < 30 then ((n-3) `div` 3,(n-3) `div` 2) else ((n-3)`div` 4,(n-3)`div`3)
         else (1,n-3)
   sizeA_ <- elements [a_lo, a_hi]
   let opsOnly = noRestriction {allowedOps = ops}
@@ -367,7 +367,7 @@ serIf bonus n restriction_orig@(Restriction ops alz arz) fs = do
     then mzero
     else do
       let (b_lo, b_hi) = if bonus 
-                         then (if n < 30 then (min (n-2-sizeA) 5,min (n-2-sizeA) 9) else (9,15))
+                         then ((n-2-sizeA) `div` 2-2,(n-2-sizeA) `div` 2+2)
                          else (1,n - 2 - sizeA)
       sizeB <- elements [b_lo..b_hi]
       let sizeC = n - 1 - sizeA - sizeB
