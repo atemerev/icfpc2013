@@ -28,6 +28,20 @@ import Debug.Trace
 --   And(a,b): l, r -> l, r
 --   Everything else: skip.
 
+leftRightZerosUnop :: Int -> Int -> Exp -> (Int, Int)
+leftRightZerosUnop lza rza Not{} = (0, 0)
+leftRightZerosUnop lza rza Shl1{} = (max (lza-1) 0, min (rza+1) 64)
+leftRightZerosUnop lza rza Shr1{} = (min (lza+1) 64, max (rza-1) 0)
+leftRightZerosUnop lza rza Shr4{} = (min (lza+4) 64, max (rza-4) 0)
+leftRightZerosUnop lza rza Shr16{} = (min (lza+16) 64, max (rza-16) 0)
+
+leftRightZerosBinop :: Int -> Int -> Int -> Int -> Exp -> (Int, Int)
+leftRightZerosBinop lza rza lzb rzb And{} = (max lza lzb, max rza rzb)
+leftRightZerosBinop lza rza lzb rzb Or{} = (min lza lzb, min rza rzb)
+leftRightZerosBinop lza rza lzb rzb Xor{} = (0, 0) -- no guarantees
+leftRightZerosBinop lza rza lzb rzb Plus{} = (max (min lza lzb - 1) 0, min rza rzb)
+leftRightZerosBinop lza rza lzb rzb If{} = (min lza lzb, min rza rzb)
+
 -- Generators are restricted to allowed function set
 data OpName = Not_op | Shl1_op | Shr1_op | Shr4_op
             | Shr16_op | And_op | Or_op | Xor_op
@@ -197,12 +211,12 @@ generateRestricted' tfold n restriction =
     foldBodies = do
       n <- getDepth
       let filledCache = let ?cache = M.empty
-                        in M.fromList [((i, InFoldBody), [(e,f) | (e,f) <- list i (serExp' i restriction InFoldBody),
-                                                                           isSimpleC e, usesFold2Arg e, usesFold1Arg e])
+                        in M.fromList [((i, InFoldBody), [p | p@(e,f,_,_) <- list i (serExp' i restriction InFoldBody),
+                                                                             isSimpleC e, usesFold2Arg e, usesFold1Arg e])
                                       | i <- [cacheMin .. min n cacheMax]
                                       ]
       let ?cache = filledCache
-      (e, hasFold) <- serExp' n (restriction `removeRestriction` (restrictionFromOp Fold_op)) InFoldBody -- Fold should not be there, but remove it just in case
+      (e, _, _, _) <- serExp' n (restriction `removeRestriction` (restrictionFromOp Fold_op)) InFoldBody -- Fold should not be there, but remove it just in case
       guard $ usesFold2Arg e && usesFold1Arg e -- since initial value for acc in tfold is known, bodies that use just acc are not interesting
       return e
 
@@ -231,12 +245,12 @@ serExpression restriction = do
   let ?tfold = False
   n <- getDepth
   let filledCache = let ?cache = M.empty
-                    in M.fromList [((i, fs), [(e,f) | (e,f) <- (list i (serExp' i restriction fs)), isSimpleC e, fs /= InFoldBody || usesFold2Arg e])
+                    in M.fromList [((i, fs), [p | p@(e,f,_,_) <- (list i (serExp' i restriction fs)), isSimpleC e, fs /= InFoldBody || usesFold2Arg e])
                                   | i <- [cacheMin .. min n cacheMax],
                                     fs <- [NoFold, ExternalFold, InFoldBody]
                                    ]
   let ?cache = filledCache
-  (e, hasFold) <- serExp' n restriction NoFold
+  (e, _, _, _) <- serExp' n restriction NoFold
   return e
 
 data FoldState = NoFold -- Allowed to generate unrestricted expression except references to fold args
@@ -247,7 +261,7 @@ data FoldState = NoFold -- Allowed to generate unrestricted expression except re
 elements :: (MonadPlus m) => [a] -> m a
 elements = msum . map return
 
-type Cache = M.Map (Int, FoldState) [(ExpC, Bool)]
+type Cache = M.Map (Int, FoldState) [(ExpC, Bool, Int, Int)]
 cacheMin = 3
 cacheMax = 7
 
@@ -256,9 +270,12 @@ serExp' :: (MonadPlus m, ?tfold :: Bool, ?cache :: Cache) => Int -> Restriction 
 serExp' n _ _ | n < 1 = mzero
 -- if tfold is set, the only occurrence of MainArg is at the toplevel
 serExp' 1 _ InFoldBody = if ?tfold
-                         then msum [return (zero, False), return (one, False), return (fold1Arg, False), return (fold2Arg, False)]
-                         else msum [return (mainArg, False), return (zero, False), return (one, False), return (fold1Arg, False), return (fold2Arg, False)]
-serExp' 1 _ _ = msum [return (zero, False), return (one, False), return (mainArg, False)]
+                         then msum [return (zero, False, 64, 64), return (one, False, 63, 1),
+                                    return (fold1Arg, False, 0, 0), return (fold2Arg, False, 0, 0)]
+                         else msum [return (mainArg, False, 0, 0),
+                                    return (zero, False, 64, 64), return (one, False, 63, 1),
+                                    return (fold1Arg, False, 0, 0), return (fold2Arg, False, 0, 0)]
+serExp' 1 _ _ = msum [return (zero, False, 64, 64), return (one, False, 63, 61), return (mainArg, False, 0, 0)]
 serExp' 2 restriction fs = msum $ map (\op -> serUnop 2 restriction fs op) (allowedUnaryOps restriction)
 serExp' n restriction fs
   | Just es <- M.lookup (n, fs) ?cache = elements es
@@ -271,33 +288,33 @@ serExp' n restriction fs = msum $ concat [
   map (\op -> serUnop n restriction fs op) (allowedUnaryOps restriction),
   map (\op -> serBinop n restriction fs op) (allowedBinaryOps restriction)]
 
-serIf :: (MonadPlus m, ?tfold :: Bool, ?cache :: Cache) => Int -> Restriction -> FoldState -> m (ExpC, Bool)
+serIf :: (MonadPlus m, ?tfold :: Bool, ?cache :: Cache) => Int -> Restriction -> FoldState -> m (ExpC, Bool, Int, Int)
 serIf n restriction fs = do
   sizeA <- elements [1..n - 3]
-  (a, foldA) <- serExp' sizeA restriction fs
+  (a, foldA, _, _) <- serExp' sizeA restriction fs
   if isConstExprC a
     then mzero
     else do
       sizeB <- elements [1..n - 2 - sizeA]
       let sizeC = n - 1 - sizeA - sizeB
-      (b, foldB) <- serExp' sizeB restriction (if foldA then ExternalFold else fs)
-      (c, foldC) <- serExp' sizeC restriction (if (foldA || foldB) then ExternalFold else fs)
+      (b, foldB, lzb, rzb) <- serExp' sizeB restriction (if foldA then ExternalFold else fs)
+      (c, foldC, lzc, rzc) <- serExp' sizeC restriction (if (foldA || foldB) then ExternalFold else fs)
       if isSimpleHead (If a b c)
-        then return (if0 a b c, foldA || foldB || foldC)
+        then return (if0 a b c, foldA || foldB || foldC, min lzb lzc, min rzb rzc)
         else mzero
 
-serFold :: (MonadPlus m, ?tfold :: Bool, ?cache :: Cache) => Int -> Restriction -> m (ExpC, Bool)
+serFold :: (MonadPlus m, ?tfold :: Bool, ?cache :: Cache) => Int -> Restriction -> m (ExpC, Bool, Int, Int)
 serFold n restriction = do
   sizeArg <- elements [1..n - 4]
   sizeSeed <- elements [1..n - 3 - sizeArg]
   let sizeBody = n - 2 - sizeArg - sizeSeed
-  (c, foldC) <- serExp' sizeBody restriction InFoldBody
+  (c, foldC, lzc, rzc) <- serExp' sizeBody restriction InFoldBody
   guard (usesFold2Arg c)
   -- TODO: is this really true that for tfold we could have ridiculous bodies that do not use foldAcc?
-  (a, foldA) <- serExp' sizeArg restriction ExternalFold
-  (b, foldB) <- serExp' sizeSeed restriction ExternalFold
+  (a, foldA, _, _) <- serExp' sizeArg restriction ExternalFold
+  (b, foldB, _, _) <- serExp' sizeSeed restriction ExternalFold
   if isSimpleHead (Fold a b c)
-    then return (fold_ a b c, True)
+    then return (fold_ a b c, True, lzc, rzc)
     else mzero
     
 usesFold2Arg :: ExpC -> Bool
@@ -340,16 +357,15 @@ usesFold1Arg (ExpC _ e) = u e
     u (Xor a b) = usesFold1Arg a || usesFold1Arg b
     u (Plus a b) = usesFold1Arg a || usesFold1Arg b
 
-    
-    
-serUnop :: (MonadPlus m, ?tfold :: Bool, ?cache :: Cache) => Int -> Restriction -> FoldState -> (ExpC -> ExpC) -> m (ExpC, Bool)
+serUnop :: (MonadPlus m, ?tfold :: Bool, ?cache :: Cache) => Int -> Restriction -> FoldState -> (ExpC -> ExpC) -> m (ExpC, Bool, Int, Int)
 serUnop n restriction fs op = do
-  (a, foldA) <- serExp' (n-1) restriction fs
-  if isSimpleHead (expr (op a))
-    then return (op a, foldA)
+  (a, foldA, lza, rza) <- serExp' (n-1) restriction fs
+  let e = op a
+  if isSimpleHead (expr e)
+    then let (lzu, rzu) = leftRightZerosUnop lza rza (expr e) in return (e, foldA, lzu, rzu)
     else mzero
 
-serBinop :: (MonadPlus m, ?tfold :: Bool, ?cache :: Cache) => Int -> Restriction -> FoldState -> (ExpC -> ExpC -> ExpC) -> m (ExpC, Bool)
+serBinop :: (MonadPlus m, ?tfold :: Bool, ?cache :: Cache) => Int -> Restriction -> FoldState -> (ExpC -> ExpC -> ExpC) -> m (ExpC, Bool, Int, Int)
 serBinop n restriction fs op = do
   sizeA <- elements [1..n - 2]
   let sizeB = n - 1 - sizeA
@@ -357,9 +373,10 @@ serBinop n restriction fs op = do
   if sizeA > sizeB
     then mzero
     else do
-      (a, foldA) <- serExp' sizeA restriction fs
+      (a, foldA, lza, rza) <- serExp' sizeA restriction fs
       guard $ expr a /= Zero -- all binary ops (and, or, xor, plus) are stupid if first arg is zero
-      (b, foldB) <- serExp' sizeB restriction (if foldA then ExternalFold else fs)
-      if isSimpleHead (expr (op a b))
-        then return (op a b, foldA || foldB)
+      (b, foldB, lzb, rzb) <- serExp' sizeB restriction (if foldA then ExternalFold else fs)
+      let e = op a b
+      if isSimpleHead (expr e)
+        then let (lze, rze) = leftRightZerosBinop lza lzb rza rzb (expr e) in return (op a b, foldA || foldB, lze, rze)
         else mzero
