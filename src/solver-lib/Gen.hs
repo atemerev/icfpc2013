@@ -178,7 +178,7 @@ isSimpleHead (Xor a b) = True
 
 isSimpleHead (Plus (ExpC _ Zero) b) = False
 isSimpleHead (Plus a (ExpC _ Zero)) = False
-isSimpleHead (Plus a b) | expCSize a > expCSize b || a > b = False  -- a>b, not a>=b to allow (plus x x)
+isSimpleHead (Plus a b) | expCSize a > expCSize b || a > b = False  -- a>b, not a>=b to allow (plus x x), which might be needed if shl1 is not available
 isSimpleHead (Plus a b) = True
 
 isSimpleParts Zero = True
