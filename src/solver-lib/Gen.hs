@@ -444,11 +444,13 @@ serIf bonus n restriction@(Restriction ops alz arz) fs unknownParityOnly valueCo
   --  XXX = MainArg
   --  XXX = (not MainArg)
   --  XXX = anything whose parity is PUnknown.
-  -- If ?bonus and not bonus, don't generate ifs larger than 3.
-  guard (not (?bonus && (not bonus) && (n > 3)))
   let (a_lo, a_hi) = if bonus then if n < 30 then ((n-3) `div` 3,(n-3) `div` 2) else ((n-3)`div` 4,(n-3)`div`3) else (1,n-3)
   sizeA_ <- elements [a_lo .. a_hi]
   guard $ (bonus == False || sizeA_ >= (n-2) `div` 4 - 2)
+  -- If ?bonus and not bonus, branches of the if are very small.
+  -- sizeB + sizeC <= 3.
+  -- sizeA should be >= n - 4
+  guard (not (?bonus && (not bonus) && (sizeA_ < n - 4)))
   let opsOnly = noRestriction {allowedOps = ops}
   let restrictionA = opsOnly
   let restrictionB = opsOnly
