@@ -1,13 +1,16 @@
 {-# LANGUAGE ImplicitParams #-}
 module ProgramCounting (
+  main
 ) where
---import System.Environment (getArgs)
+import System.Environment (getArgs)
 
 import Data.Array
 import Data.Array.IArray (amap)
 import Data.List (sort, nub)
 import Control.Monad
 import Text.Printf
+import Data.Bits
+import Data.Word
 
 size = 30
 
@@ -140,7 +143,50 @@ countTag (AFS n) = (topLevelNoFoldCounts ?ctx) ! n
 countTag (AF n) = (topLevelCounts ?ctx) ! n
 countTag (TF n) = (inTFoldExprCounts ?ctx) ! n
 
+data EvalContext = ECtx { x :: !Word64, y :: !Word64, z :: !Word64 }
+
+eval :: (?ectx :: EvalContext) => Tag -> Word64
+eval C0 = 0
+eval C1 = 1
+eval X = x ?ectx
+eval Y = y ?ectx
+eval Z = z ?ectx
+eval (Not tag) = complement (eval tag)
+eval (Shl1 tag) = shiftL (eval tag) 1
+eval (Shr1 tag) = shiftR (eval tag) 1
+eval (Shr4 tag) = shiftR (eval tag) 4
+eval (Shr16 tag) = shiftR (eval tag) 16
+eval (And tag1 tag2) = (eval tag1) .&. (eval tag2)
+eval (Or tag1 tag2) = (eval tag1) .|. (eval tag2)
+eval (Xor tag1 tag2) = (eval tag1) `xor` (eval tag2)
+eval (Plus tag1 tag2) = (eval tag1) + (eval tag2)
+eval (If0 tag1 tag2 tag3) = if eval tag1 == 0 then eval tag2 else eval tag3
+eval (Fold tag1 tag2 tag3) = foldr foldOp seed [b1, b2, b3, b4, b5, b6, b7, b8]
+  where
+    foldOp :: (?ectx :: EvalContext) => Word64 -> Word64 -> Word64
+    foldOp y z = let ?ectx = ?ectx { y = y, z = z } in eval (tag3)
+    val = eval tag1
+    seed = eval tag2
+    b8 = val .&. 0xff
+    b7 = (val `shiftR` 8) .&. 0xff
+    b6 = (val `shiftR` 16) .&. 0xff
+    b5 = (val `shiftR` 24) .&. 0xff
+    b4 = (val `shiftR` 32) .&. 0xff
+    b3 = (val `shiftR` 40) .&. 0xff
+    b2 = (val `shiftR` 48) .&. 0xff
+    b1 = (val `shiftR` 56) .&. 0xff
+
+evalCtx :: Word64 -> Word64 -> Word64 -> EvalContext
+evalCtx x y z = ECtx { x = x, y = y, z = z }
+
 main = do
+    n <- fmap (read.head) getArgs
+    let res = (topLevelExpands ?ctx) ! n
+    print $ sum $ map (\f -> let ?ectx = evalCtx 0 0 0 in eval f) res
+  where
+    ?ctx = defaultContext
+
+main' = do
     putStrLn "size,inFoldExprCount,topLevelNoFoldCount,topLevelCount,tfoldCount"
     forM_ [1..size] $ \s ->
       printf "%d,%d,%d,%d,%d\n" s (countTag (UF s)) (countTag (AFS s)) (countTag (AF s)) (countTag (TF s))
