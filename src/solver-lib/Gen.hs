@@ -444,7 +444,7 @@ serIf bonus n restriction_orig@(Restriction ops alz arz) fs unknownParityOnly va
         if bonus then restriction_orig `removeOpRestriction` If_op
         else restriction_orig
   let (a_lo, a_hi) = 
-        if bonus then if n < 30 then ((n-3) `div` 3,(n-3) `div` 2) else ((n-3)`div` 4,(n-3)`div`3)
+        if bonus then if n < 30 then ((n-3) `div` 3,(n-3) `div` 3 + 2) else ((n-3)`div` 4,(n-3)`div`4 + 2)
         else (1,n-3)
   sizeA_ <- elements [a_lo, a_hi]
   guard $ (bonus == False || sizeA_ >= (n-2) `div` 4 - 2)
@@ -473,7 +473,7 @@ serIf bonus n restriction_orig@(Restriction ops alz arz) fs unknownParityOnly va
     then mzero
     else do
       let (b_lo, b_hi) = if bonus 
-                         then ((n-2-sizeA) `div` 2-2,(n-2-sizeA) `div` 2+2)
+                         then ((n-2-sizeA) `div` 2-1,(n-2-sizeA) `div` 2+1)
                          else (1,n - 2 - sizeA)
       sizeB <- elements [b_lo..b_hi]
       guard $ (bonus == False || sizeB >= (n-2) `div` 4)
