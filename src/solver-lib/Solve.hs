@@ -38,10 +38,12 @@ solve pId size operations = do
 
   where
     loop inputs outputs = do
-      putStrLn $
-        "INOUTS to reproduce with client solve-exact: "
-          ++ unwords operations ++ "\n"
-          ++ show (inputs, outputs)
+      let fname = pId++".solve-exact" 
+      writeFile fname  $
+        "client solve-exact " ++ show size ++ " "
+          ++ show (unwords operations) ++ " "
+          ++ show (show (inputs, outputs))
+      putStrLn $ "INOUTS saved into script " ++ fname
       first <-
         maybe (throwIO $ ErrorCall "Nothing has been found") return
         =<< basicSolve size operations inputs outputs
