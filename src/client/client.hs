@@ -27,7 +27,7 @@ data Cmd = MyProblems
          | Unsolved String
          | FindSolvable String Int
          | TrainSolve Int
-         | Solve String String
+         | Solve Int String String
          | Filter String String
          | SolveMany Int Int Int Bool
          | LowLevelSolve String Int [String]
@@ -76,11 +76,11 @@ run (TrainSolve size) = do
   print p
   solve (trainingId p) size (trainingOps p)
 
-run (Solve fname id) = do
+run (Solve tmout fname id) = do
   problems <- FC.getUnsolvedHS fname
   case find ((==id).problemId) problems of
     Nothing -> error "No unsolved problems with this ID"
-    Just p -> solve (problemId p) (problemSize p) (operators p)
+    Just p -> solveWithTimeout tmout (problemId p) (problemSize p) (operators p)
 
 run (LowLevelSolve id size ops) = solve id size ops
 
@@ -204,7 +204,8 @@ filterCached = FilterCached <$> (read <$> argument str (metavar "SIZE"))
                             <*> (words <$> (argument str (metavar "OPERATIONS")))
                             <*> (read <$> argument str (metavar "EXPECTED-VALUE"))
 
-realSolve = Solve <$> argument str (metavar "FILE")
+realSolve = Solve <$> (read <$> argument str (metavar "TIMEOUT"))
+                  <*> argument str (metavar "FILE")
                   <*> argument str (metavar "ID")
 
 realSolveMany= SolveMany <$> (read <$> strOption (metavar "OFFSET" <> long "offset"))
