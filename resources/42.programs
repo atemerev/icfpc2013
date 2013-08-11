@@ -1,0 +1,126 @@
+(lambda
+ (x_9)
+ (if0
+  (and (plus (shr16 (shr16 (shl1 x_9))) (shr16 x_9)) 1)
+  (plus x_9 (shl1 (and (shr4 x_9) x_9)))
+  (plus 1 (plus x_9 x_9))))
+(lambda
+ (x_3)
+ (if0
+  (and (xor (or 1 (shr16 (shr4 x_3))) x_3) 1)
+  (plus (if0 (shr16 x_3) 1 x_3) 1)
+  (or (plus (or 1 x_3) 1) x_3)))
+(lambda
+ (x_15)
+ (if0
+  (and (xor 1 (plus (shr1 (shr16 x_15)) x_15)) 1)
+  (xor x_15 (plus x_15 x_15))
+  (xor x_15 (shr4 (not x_15)))))
+(lambda
+ (x_3)
+ (if0
+  (and (plus (xor x_3 (plus x_3 x_3)) 1) 1)
+  (shr16 (shr1 (not (shr4 x_3))))
+  (not (plus x_3 (not 1)))))
+(lambda
+ (x_6)
+ (if0
+  (and (xor x_6 (shr1 (shl1 (not (shl1 x_6))))) 1)
+  (xor x_6 (shr4 (not x_6)))
+  (or (shr16 (shr1 (shr4 (not x_6)))) 1)))
+(lambda
+ (x_4)
+ (if0
+  (and (plus x_4 (plus x_4 x_4)) 1)
+  (xor 1 (plus x_4 (not 0)))
+  (xor (shr16 (shr4 x_4)) (plus 1 x_4))))
+(lambda
+ (x_18)
+ (if0
+  (and (plus (xor x_18 (shr16 x_18)) (shr1 x_18)) 1)
+  (plus (shl1 (shr4 x_18)) x_18)
+  (plus (shr16 (shr16 x_18)) (plus x_18 1))))
+(lambda
+ (x_2)
+ (if0
+  (and (and (shr4 (shr16 x_2)) x_2) 1)
+  (plus x_2 (plus x_2 x_2))
+  (shl1 (plus (shr1 x_2) (shr16 x_2)))))
+(lambda
+ (x_1)
+ (if0
+  (and (plus (or (not x_1) (shr4 x_1)) x_1) 1)
+  (or (not (shl1 1)) x_1)
+  (if0 (shr4 (not x_1)) 1 (shl1 x_1))))
+(lambda
+ (x_7)
+ (if0
+  (and (xor x_7 (plus (shr16 (not x_7)) x_7)) 1)
+  (plus (not 1) (if0 x_7 1 x_7))
+  (plus (or (not x_7) (shr4 x_7)) x_7)))
+(lambda
+ (x_20)
+ (if0
+  (and (or x_20 (and (not (shr4 x_20)) 1)) 1)
+  (not (or x_20 (shr1 x_20)))
+  (plus x_20 (shl1 (and (shl1 x_20) x_20)))))
+(lambda
+ (x_1)
+ (if0
+  (and (plus (shr1 (shr16 (plus x_1 x_1))) x_1) 1)
+  (or (shl1 (shr16 x_1)) 1)
+  (xor (plus 1 x_1) 1)))
+(lambda
+ (x_6)
+ (if0
+  (and (or x_6 (shl1 (and x_6 (shl1 x_6)))) 1)
+  (plus (not (shr4 x_6)) x_6)
+  (and (shr1 (shr4 x_6)) 1)))
+(lambda
+ (x_1)
+ (if0
+  (and (plus (or (not x_1) (shr4 x_1)) x_1) 1)
+  (or (not (shl1 1)) x_1)
+  (if0 (shr4 (not x_1)) 1 (shl1 x_1))))
+(lambda
+ (x_18)
+ (if0
+  (and (plus (plus 1 (shr4 (shr4 x_18))) x_18) 1)
+  (and x_18 (shl1 (not x_18)))
+  (or (shl1 (shr16 x_18)) x_18)))
+(lambda
+ (x_15)
+ (if0
+  (and (not (xor (shl1 x_15) x_15)) 1)
+  (and (shr1 (not x_15)) (or x_15 1))
+  (xor (shr1 (shr16 x_15)) 1)))
+(lambda
+ (x_4)
+ (if0
+  (and (plus (shr16 (shr16 (shl1 x_4))) (shr16 x_4)) 1)
+  (not (plus x_4 (not 1)))
+  (and (not 1) (not x_4))))
+(lambda
+ (x_16)
+ (if0
+  (and (plus (shr4 (shr4 x_16)) x_16) 1)
+  (and (shr1 (shr16 x_16)) x_16)
+  (xor (xor 1 x_16) (not (shr4 x_16)))))
+(lambda
+ (x_16)
+ (if0
+  (and (plus x_16 (plus (shr4 (shr4 x_16)) 1)) 1)
+  (shl1 (plus 1 (shr1 x_16)))
+  (plus (not 1) (if0 x_16 1 x_16))))
+(lambda
+ (x_15)
+ (if0
+  (and (xor x_15 (shr4 (and (shl1 x_15) x_15))) 1)
+  (plus x_15 (or 1 x_15))
+  (and x_15 (plus x_15 1))))
+(lambda
+ (x_14)
+ (if0
+  (and (plus (shr1 (shr1 x_14)) x_14) 1)
+  (or 1 (shl1 (and (shr4 x_14) 1)))
+  (xor (plus x_14 1) 1)))
