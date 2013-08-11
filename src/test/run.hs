@@ -1,4 +1,4 @@
-{-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE ViewPatterns, ImplicitParams #-}
 import Test.Tasty
 import Test.Tasty.Options
 import Test.Tasty.HUnit
@@ -27,7 +27,7 @@ mask64 = 0xFFFFFFFFFFFFFFFF
 serProgSC r = generate $ \n -> serProg n r False Nothing
 serExpressionSC r = generate $ \n -> serExpression' n r False Nothing
 
-generatorTests = localOption (SmallCheckDepth 8) $ testGroup "Generation"
+generatorTests = let ?bonus = False in localOption (SmallCheckDepth 8) $ testGroup "Generation"
   [ testProperty "Programs have correct size" $
       \n -> changeDepth (const n) $
         over (serProgSC noRestriction) $ \prog -> progSize (expr prog) == n

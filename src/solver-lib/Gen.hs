@@ -302,7 +302,8 @@ generateRestricted n rst (alz, arz) unknownParityOnly valueConstraint = generate
     parse other = error $ "failed to parse operation " ++ other
 
 generateRestricted' :: MonadLevel m => Bool -> Bool -> Int -> Restriction -> Bool -> Maybe Word64 -> m ExpC
-generateRestricted' bonus tfold n restriction unknownParityOnly valueConstraint = 
+generateRestricted' bonus tfold n restriction unknownParityOnly valueConstraint = do
+  let ?bonus = bonus
   -- All bonus tasks have the same form:
   -- 1)top-level expression is (if (and 1 a) b c)
   -- 2)there are no nested ifs
@@ -312,6 +313,7 @@ generateRestricted' bonus tfold n restriction unknownParityOnly valueConstraint 
   then do (e,_,_,_,_) <- do let filledCache = 
                                   let ?cache = M.empty
                                       ?tfold = False
+                                      ?bonus = bonus
                                   in M.fromList [((i, ExternalFold), [p | p@(e,f,_,_,_) <- (serExp' i (restriction `removeOpRestriction` If_op) ExternalFold False Nothing), isSimpleC e])
                                                 | i <- [5 .. 12]
                                                 ]
@@ -330,11 +332,13 @@ generateRestricted' bonus tfold n restriction unknownParityOnly valueConstraint 
     foldBodies n = do
       let opsOnlyRestriction = noRestriction {allowedOps = allowedOps restriction}
       let filledCache = let ?cache = M.empty
+                            ?bonus = bonus
                         in M.fromList [((i, InFoldBody), [p | p@(e,f,_,_,_) <- serExp' i opsOnlyRestriction InFoldBody False Nothing,
                                                                                isSimpleC e {-, usesFold2Arg e, usesFold1Arg e-} ])
                                       | i <- [cacheMin .. min n cacheMax]
                                       ]
       let ?cache = filledCache
+      let ?bonus = bonus
       (e, _, _, _, _) <- serExp' n (restriction `removeOpRestriction` Fold_op) InFoldBody False Nothing -- TODO: vconstraint -- Fold should not be there, but remove it just in case
       -- guard $ usesFold2Arg e && usesFold1Arg e -- since initial value for acc in tfold is known, bodies that use just acc are not interesting
       return e
@@ -353,16 +357,16 @@ allowedFold :: Restriction -> Bool
 allowedFold r = allowed r Fold_op
 
 -- 
-serProg :: MonadLevel m => Int -> Restriction -> Bool -> Maybe Word64 -> m ExpC
+serProg :: (MonadLevel m, ?bonus :: Bool) => Int -> Restriction -> Bool -> Maybe Word64 -> m ExpC
 serProg n restriction unknownParityOnly valueConstraint = serExpression (n-1) restriction unknownParityOnly valueConstraint -- remove 1 level of depth for top-level lambda
 
 -- a top-level expression, no tfold
-serExpression :: (MonadLevel m) => Int -> Restriction -> Bool -> Maybe Word64 -> m ExpC
+serExpression :: (MonadLevel m, ?bonus :: Bool) => Int -> Restriction -> Bool -> Maybe Word64 -> m ExpC
 serExpression n restriction unknownParityOnly valueConstraint = do
   (e,_,_,_,_) <- (serExpression' n restriction unknownParityOnly valueConstraint)
   return e
 
-serExpression' :: (MonadLevel m) => Int -> Restriction -> Bool -> Maybe Word64 -> m (ExpC, Bool, Int, Int, Parity)
+serExpression' :: (MonadLevel m, ?bonus :: Bool) => Int -> Restriction -> Bool -> Maybe Word64 -> m (ExpC, Bool, Int, Int, Parity)
 serExpression' n restriction unknownParityOnly valueConstraint = do
   let opsOnlyRestriction = noRestriction {allowedOps = allowedOps restriction}
   let ?tfold = False
@@ -387,7 +391,7 @@ cacheMin = 3
 cacheMax = 7
 
 -- Generates (expression, does it contain a fold?, how many left bits are zero?, how many right bits are zero?)
-serExp' :: (MonadLevel m, ?tfold :: Bool, ?cache :: Cache) => Int -> Restriction -> FoldState -> Bool -> Maybe Word64 -> m (ExpC, Bool, Int, Int, Parity)
+serExp' :: (MonadLevel m, ?tfold :: Bool, ?cache :: Cache, ?bonus :: Bool) => Int -> Restriction -> FoldState -> Bool -> Maybe Word64 -> m (ExpC, Bool, Int, Int, Parity)
 serExp' n _ _ _ _ | n < 1 = mzero
 -- if tfold is set, the only occurrence of MainArg is at the toplevel
 serExp' 1 (Restriction _ alz arz) InFoldBody unknownParityOnly valueConstraint = do
@@ -430,22 +434,19 @@ serExp' n restriction fs unknownParityOnly valueConstraint = msum $ concat [
   map (\op -> serUnop n restriction fs op unknownParityOnly valueConstraint) (allowedUnaryOps restriction),
   map (\op -> serBinop n restriction fs op unknownParityOnly valueConstraint) (allowedBinaryOps restriction)]
 
-serIf :: (MonadLevel m, ?tfold :: Bool, ?cache :: Cache) => Bool -> Int -> Restriction -> FoldState -> Bool -> Maybe Word64 -> m (ExpC, Bool, Int, Int, Parity)
+serIf :: (MonadLevel m, ?tfold :: Bool, ?cache :: Cache, ?bonus :: Bool) => Bool -> Int -> Restriction -> FoldState -> Bool -> Maybe Word64 -> m (ExpC, Bool, Int, Int, Parity)
 -- bonus tasks have top-level if with a b c components of roughly equal size without nested ifs
 -- "bonus" controls if we are generating this special "if"
-serIf bonus n restriction_orig@(Restriction ops alz arz) fs unknownParityOnly valueConstraint = do
+serIf bonus n restriction@(Restriction ops alz arz) fs unknownParityOnly valueConstraint = do
   -- If bonus, the options for XXX in the condition (if (and 1 XXX)) are:
   --  XXX = 0
   --  XXX = 1
   --  XXX = MainArg
   --  XXX = (not MainArg)
   --  XXX = anything whose parity is PUnknown.
-  let restriction@(Restriction ops alz arz) = 
-        if bonus then restriction_orig `removeOpRestriction` If_op
-        else restriction_orig
-  let (a_lo, a_hi) = 
-        if bonus then if n < 30 then ((n-3) `div` 3,(n-3) `div` 3 + 2) else ((n-3)`div` 4,(n-3)`div`4 + 2)
-        else (1,n-3)
+  -- If ?bonus and not bonus, don't generate ifs larger than 3.
+  guard (not (?bonus && (not bonus) && (n > 3)))
+  let (a_lo, a_hi) = if bonus then if n < 30 then ((n-3) `div` 3,(n-3) `div` 2) else ((n-3)`div` 4,(n-3)`div`3) else (1,n-3)
   sizeA_ <- elements [a_lo .. a_hi]
   guard $ (bonus == False || sizeA_ >= (n-2) `div` 4 - 2)
   let opsOnly = noRestriction {allowedOps = ops}
@@ -472,13 +473,11 @@ serIf bonus n restriction_orig@(Restriction ops alz arz) fs unknownParityOnly va
   if isConstExprC a
     then mzero
     else do
-      let (b_lo, b_hi) = if bonus 
-                         then ((n-2-sizeA) `div` 2-1,(n-2-sizeA) `div` 2+1)
-                         else (1,n - 2 - sizeA)
+      let (b_lo, b_hi) = (1,n - 2 - sizeA)
       sizeB <- elements [b_lo..b_hi]
-      guard $ (bonus == False || sizeB >= (n-2) `div` 4)
       let sizeC = n - 1 - sizeA - sizeB
-      guard $ (bonus == False || sizeC >= (n-2) `div` 4)
+      -- In non-top ifs within a bonus if, one of the operands is of size 1.
+      guard (not (not (bonus) && ?bonus && (sizeB /= 1) && (sizeC /= 1)))
       let aVal = cached a
       let (bValueConstraint, cValueConstraint) = 
             if isNothing64 aVal then (Nothing, Nothing)
@@ -499,7 +498,7 @@ serIf bonus n restriction_orig@(Restriction ops alz arz) fs unknownParityOnly va
       guard (not (unknownParityOnly && pye /= PUnknown))
       return (e, foldA || foldB || foldC, lze, rze, pye)
 
-serFold :: (MonadLevel m, ?tfold :: Bool, ?cache :: Cache) => Int -> Restriction -> Bool -> m (ExpC, Bool, Int, Int, Parity)
+serFold :: (MonadLevel m, ?tfold :: Bool, ?cache :: Cache, ?bonus :: Bool) => Int -> Restriction -> Bool -> m (ExpC, Bool, Int, Int, Parity)
 serFold n restriction@(Restriction ops _ _) unknownParityOnly = level $ do
   let opsOnly = noRestriction {allowedOps = ops}
   let restrictionArg = opsOnly
@@ -560,7 +559,7 @@ usesFold1Arg (ExpC _ e) = u e
     u (Xor a b) = usesFold1Arg a || usesFold1Arg b
     u (Plus a b) = usesFold1Arg a || usesFold1Arg b
 
-serUnop :: (MonadLevel m, ?tfold :: Bool, ?cache :: Cache) => Int -> Restriction -> FoldState -> OpName -> Bool -> Maybe Word64 -> m (ExpC, Bool, Int, Int, Parity)
+serUnop :: (MonadLevel m, ?tfold :: Bool, ?cache :: Cache, ?bonus :: Bool) => Int -> Restriction -> FoldState -> OpName -> Bool -> Maybe Word64 -> m (ExpC, Bool, Int, Int, Parity)
 serUnop n restriction@(Restriction ops alz arz) fs op unknownParityOnly valueConstraint = level $ do
   guard (not (unknownParityOnly && op == Shl1_op)) -- Shl1 always generates known (zero) parity.
   let opsOnly = noRestriction {allowedOps = ops}
@@ -595,7 +594,7 @@ serUnop n restriction@(Restriction ops alz arz) fs op unknownParityOnly valueCon
   guard (not (unknownParityOnly && pyu /= PUnknown))
   return (e, foldA, lzu, rzu, pyu)
 
-serBinop :: (MonadLevel m, ?tfold :: Bool, ?cache :: Cache) => Int -> Restriction -> FoldState -> OpName -> Bool -> Maybe Word64 -> m (ExpC, Bool, Int, Int, Parity)
+serBinop :: (MonadLevel m, ?tfold :: Bool, ?cache :: Cache, ?bonus :: Bool) => Int -> Restriction -> FoldState -> OpName -> Bool -> Maybe Word64 -> m (ExpC, Bool, Int, Int, Parity)
 serBinop n restriction@(Restriction ops alz arz) fs op unknownParityOnly valueConstraint = level $ do
   let opsOnly = noRestriction {allowedOps = ops}
   let (alzA, arzA) = case op of {
@@ -605,7 +604,7 @@ serBinop n restriction@(Restriction ops alz arz) fs op unknownParityOnly valueCo
     ; Plus_op -> (64, 64)
     }
   let restrictionA = Restriction ops alzA arzA
-  sizeA <- elements [1..n - 2]
+  sizeA <- if ?bonus then return 1 else elements [1..n - 2]
   let sizeB = n - 1 - sizeA
   -- Normal form: first operand must be smaller in size
   if sizeA > sizeB
