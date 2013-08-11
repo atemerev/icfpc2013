@@ -51,8 +51,10 @@ data OpName = Not_op | Shl1_op | Shr1_op | Shr4_op
             | Shr16_op | And_op | Or_op | Xor_op
             | Plus_op | If_op | Fold_op
             deriving (Eq, Ord, Show)
-data Restriction = Restriction { allowedOps :: !Int, nonzeroLeftBits :: !Int, nonzeroRightBits :: !Int } deriving (Eq, Show)
-noRestriction = Restriction { allowedOps = 0xFFFF, nonzeroLeftBits = 0, nonzeroRightBits = 0 }
+-- allowedZeroLeftBits: "don't generate functions which are guaranteed
+-- to only return values with > allowedZeroLeftBits zero bits on the left"
+data Restriction = Restriction { allowedOps :: !Int, allowedZeroLeftBits :: !Int, allowedZeroRightBits :: !Int } deriving (Eq, Show)
+noRestriction = Restriction { allowedOps = 0xFFFF, allowedZeroLeftBits = 64, allowedZeroRightBits = 64 }
 
 hasRestriction :: Restriction -> Restriction -> Bool
 hasRestriction base elem = allowedOps base .&. allowedOps elem /= 0
@@ -68,11 +70,11 @@ allow restriction opName f =
 allowUnary restriction opName f =
   if allowedUnary restriction opName then Just f else Nothing
 
-allowedUnary r@(Restriction _ lnz rnz) opName = allowed r opName && case opName of {
-    Shl1_op -> rnz < 1
-  ; Shr1_op -> lnz < 1
-  ; Shr4_op -> lnz < 4
-  ; Shr16_op -> lnz < 16
+allowedUnary r@(Restriction _ alz arz) opName = allowed r opName && case opName of {
+    Shl1_op -> arz >= 1
+  ; Shr1_op -> alz >= 1
+  ; Shr4_op -> alz >= 4
+  ; Shr16_op -> alz >= 16
   ; _ -> True
   }
 
@@ -212,8 +214,9 @@ generateRestricted' tfold n restriction =
   where
     foldBodies :: (?tfold :: Bool, MonadLevel m) => Int -> m ExpC
     foldBodies n = do
+      let opsOnlyRestriction = noRestriction {allowedOps = allowedOps restriction}
       let filledCache = let ?cache = M.empty
-                        in M.fromList [((i, InFoldBody), [p | p@(e,f,_,_) <- serExp' i restriction InFoldBody,
+                        in M.fromList [((i, InFoldBody), [p | p@(e,f,_,_) <- serExp' i opsOnlyRestriction InFoldBody,
                                                                              isSimpleC e, usesFold2Arg e, usesFold1Arg e])
                                       | i <- [cacheMin .. min n cacheMax]
                                       ]
@@ -249,9 +252,10 @@ serExpression n restriction = do
 
 serExpression' :: (MonadLevel m) => Int -> Restriction -> m (ExpC, Bool, Int, Int)
 serExpression' n restriction = do
+  let opsOnlyRestriction = noRestriction {allowedOps = allowedOps restriction}
   let ?tfold = False
   let filledCache = let ?cache = M.empty
-                    in M.fromList [((i, fs), [p | p@(e,f,_,_) <- (serExp' i restriction fs), isSimpleC e, fs /= InFoldBody || usesFold2Arg e])
+                    in M.fromList [((i, fs), [p | p@(e,f,_,_) <- (serExp' i opsOnlyRestriction fs), isSimpleC e, fs /= InFoldBody || usesFold2Arg e])
                                   | i <- [cacheMin .. min n cacheMax],
                                     fs <- [NoFold, ExternalFold, InFoldBody]
                                    ]
@@ -282,8 +286,10 @@ serExp' 1 _ InFoldBody = if ?tfold
                                     return (fold1Arg, False, 0, 0), return (fold2Arg, False, 0, 0)]
 serExp' 1 _ _ = msum [return (zero, False, 64, 64), return (one, False, 63, 0), return (mainArg, False, 0, 0)]
 serExp' 2 restriction fs = msum $ map (\op -> serUnop 2 restriction fs op) (allowedUnaryOps restriction)
-serExp' n restriction fs
-  | Just es <- M.lookup (n, fs) ?cache = elements es
+serExp' n restriction@(Restriction _ alz arz) fs
+  -- When taking from cache, remember that the cache was unrestricted by left/right bit zeroing.
+  -- If we need to get entries which are allowed to zero at most alz bits, then omit entries which all zero 
+  | Just es <- M.lookup (n, fs) ?cache = elements (filter (\(e, _, lz, rz) -> lz <= alz && rz <= arz) es)
 serExp' 3 restriction fs = msum $ concat [
   map (\op -> serUnop 3 restriction fs op) (allowedUnaryOps restriction),
   map (\op -> serBinop 3 restriction fs op) (allowedBinaryOps restriction)]
