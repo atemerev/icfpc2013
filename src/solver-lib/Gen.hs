@@ -200,15 +200,16 @@ isSimpleParts (Or a b) = isSimpleC a && isSimpleC b
 isSimpleParts (Xor a b) = isSimpleC a && isSimpleC b
 isSimpleParts (Plus a b) = isSimpleC a && isSimpleC b
 
-generateRestrictedUpTo :: MonadLevel m => Int -> [String] -> m ExpC -- allowed ops are passed as string list
-generateRestrictedUpTo n rst = elements [1..n] >>= \i -> generateRestricted i rst
+generateRestrictedUpTo :: MonadLevel m => Int -> [String] -> (Int, Int) -> m ExpC -- allowed ops are passed as string list
+generateRestrictedUpTo n rst (alz, arz) = elements [1..n] >>= \i -> generateRestricted i rst (alz, arz)
 
-generateRestricted :: MonadLevel m => Int -> [String] -> m ExpC -- allowed ops are passed as string list
-generateRestricted n rst = 
+generateRestricted :: MonadLevel m => Int -> [String] -> (Int, Int) -> m ExpC -- allowed ops are passed as string list
+generateRestricted n rst (alz, arz) = 
   generateRestricted' tfold n restriction
   where
     tfold = "tfold" `elem` rst
-    restriction = restrictionFromList $ map parse $ filter (/="bonus") $ filter (/="tfold") rst
+    restriction = restriction0 { allowedZeroLeftBits = alz, allowedZeroRightBits = arz }
+    restriction0 = restrictionFromList $ map parse $ filter (/="bonus") $ filter (/="tfold") rst
     parse "not" = Not_op
     parse "shl1" = Shl1_op
     parse "shr1" = Shr1_op

@@ -10,13 +10,24 @@ import PP (ppProg)
 import ParSearch
 import Control.Exception
 import System.Timeout
+import Data.Bits
 
 solve :: String -> Int -> [String] -> IO ()
-solve progId size operations = solve' progId (generateRestrictedUpTo size operations)
+solve progId size operations = solve' progId (generateRestrictedUpTo size operations (64, 64))
+
+onePos :: Word64 -> [Int]
+onePos x = [i | i <- [0..63], x .&. (1 `shiftL` i) /= 0]
+
+numRightZeros 0 = 64
+numRightZeros x = minimum (onePos x)
+
+numLeftZeros 0 = 64
+numLeftZeros x = 63 - maximum (onePos x)
 
 solveExact :: Int -> [String] -> [Word64] -> [Word64] -> IO ()
 solveExact size operations inputs outputs = do
-  let programs = generateRestrictedUpTo size operations
+  let (alz, arz) = (minimum $ map numLeftZeros outputs, minimum $ map numRightZeros outputs)
+  let programs = generateRestrictedUpTo size operations (alz, arz)
   let candidates = filterProgs inputs outputs programs
   if null candidates
     then putStrLn "Couldn't find any program matching conditions at all!"
@@ -55,7 +66,7 @@ isFeasible tmout p
   | problemSize p >= 16 = return Nothing
   | otherwise =
     timeout (tmout * 10^6) $ do
-      let gen = generateRestrictedUpTo (problemSize p) (operators p)
+      let gen = generateRestrictedUpTo (problemSize p) (operators p) (64, 64)
       let lgen = length gen
       evaluate lgen
       return ()
