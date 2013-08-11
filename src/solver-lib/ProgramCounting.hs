@@ -17,12 +17,15 @@ module ProgramCounting (
 import System.Environment (getArgs)
 
 import Data.Array
+import qualified Data.Array.Unboxed as AU
 import Data.Array.IArray (amap)
 import Data.List (sort, nub)
 import Control.Monad
 import Text.Printf
 import Data.Bits
 import Data.Word
+import Data.Map (Map)
+import qualified Data.Map as M
 
 size = 43
 
@@ -246,6 +249,27 @@ isBasicExpr (Plus tag1 tag2) = isBasicExpr tag2 && isBasicExpr tag1
 isBasicExpr (If0 tag1 tag2 tag3) = isBasicExpr tag1 && isBasicExpr tag2 && isBasicExpr tag3
 isBasicExpr (Fold tag1 tag2 tag3) = isBasicExpr tag1 && isBasicExpr tag2 && isBasicExpr tag3
 
+isConst :: Tag -> Bool
+isConst UF{} = False
+isConst AFS{} = False
+isConst AF{} = False
+isConst TF{} = False
+isConst C0 = True
+isConst C1 = True
+isConst (Not tag) = isConst tag
+isConst (Shl1 tag) = isConst tag
+isConst (Shr1 tag) = isConst tag
+isConst (Shr4 tag) = isConst tag
+isConst (Shr16 tag) = isConst tag
+-- tag2 usually has smaller size
+isConst (And tag1 tag2) = isConst tag2 && isConst tag1 || tag1 == C0 || tag2 == C0
+isConst (Or tag1 tag2) = isConst tag2 && isConst tag1
+isConst (Xor tag1 tag2) = isConst tag2 && isConst tag1
+isConst (Plus tag1 tag2) = isConst tag2 && isConst tag1
+isConst (If0 tag1 tag2 tag3) = isConst tag1 && isConst tag2 && isConst tag3
+isConst (Fold tag1 tag2 tag3) = isConst tag1 && isConst tag2 && isConst tag3
+isConst _ = False
+
 denumeralize :: (?ctx :: Context) => Integer -> [Tag] -> Tag
 denumeralize x ts | length ts == 1 && isBasicExpr firstElem = firstElem
                   | otherwise = denumeralize (x-base) (expandTag xType)
@@ -257,12 +281,33 @@ denumeralize x ts | length ts == 1 && isBasicExpr firstElem = firstElem
     xType = ts !! (length precedingCounts - 1)
     base = last precedingCounts
 
-main = do
-    n <- fmap (read.head) getArgs
-    let res = (iterate (>>= expandTag) [AF n]) !! (n+1)
-    print $ sum $ map (\f -> let ?ectx = evalCtx 0 0 0 in eval f) res
+newtype InterleavedCache = ICache (AU.UArray Int Word64) deriving Show
+buildCaches :: (?ctx :: Context) => [Word64] -> Int -> InterleavedCache
+buildCaches inputs cacheSize = ICache $ AU.listArray (0,iCacheSize-1) computedValues
   where
-    ?ctx = defaultContext
+    nInputs = length inputs
+    iCacheSize = (cacheSize*nInputs)
+    computedValues = [ evalProg prog x
+                     | n <- [0..cacheSize-1]
+                     , let prog = denumeralize (fromIntegral n) allPrograms
+                     , x <- inputs
+                     ]
+    allPrograms = [ AF n | n <- [1..30] ]
+    evalProg program x = eval program 
+      where
+        ?ectx = evalCtx x 0 0
+  
+main = do
+    [sizeStr] <- getArgs
+    let ts = [AF n | n <- [1..42]]
+        size = read sizeStr
+        maxN = sum $ map countTag [AF n | n <- [1..size]]
+        inputV = [0x1122334455667788, 0xFEDCBA9876543210, 1]
+        ICache cache = buildCaches inputV (fromIntegral maxN)
+    print maxN
+    print $ map (\i -> cache AU.! (fromIntegral $ (i+1)*maxN - 1)) [0,1,2]
+  where
+    ?ctx = newContext defaultAllowedOp1 defaultAllowedOp2 True False
 
 main' = do
     putStrLn "size,inFoldExprCount,topLevelNoFoldCount,topLevelCount,tfoldCount"
