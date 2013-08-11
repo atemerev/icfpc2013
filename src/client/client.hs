@@ -101,7 +101,8 @@ run (SolveMany offset limit tmout bySize includeBonuses) = do
     
     trySolve [] =  putStrLn "All done!"
     trySolve (p:ps) = do
-      print <$> getCurrentTime
+      tm <- getCurrentTime
+      print tm
       putStrLn $ printf ">>> Trying %s, size %d, operations (%s)" (problemId p) (problemSize p) (intercalate " " $ operators p)
       solveWithTimeout tmout (problemId p) (problemSize p) (operators p)
       trySolve ps
