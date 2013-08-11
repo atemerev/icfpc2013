@@ -395,7 +395,8 @@ serExp' :: (MonadLevel m, ?tfold :: Bool, ?cache :: Cache, ?bonus :: Bool) => In
 serExp' n _ _ _ _ | n < 1 = mzero
 -- if tfold is set, the only occurrence of MainArg is at the toplevel
 serExp' 1 (Restriction _ alz arz) InFoldBody unknownParityOnly valueConstraint = do
-  let maybeZero = if (not unknownParityOnly) && alz == 64 && arz == 64 && maybe True (==0) valueConstraint
+  -- There are very few zeros in bonus tasks.
+  let maybeZero = if (not ?bonus) && (not unknownParityOnly) && alz == 64 && arz == 64 && maybe True (==0) valueConstraint
                   then return (zero, False, 64, 64, PZero) else mzero
   let maybeOne  = if (not unknownParityOnly) && alz >= 63 && maybe True (==1) valueConstraint
                   then return (one, False, 63, 0, POne) else mzero
