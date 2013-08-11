@@ -371,7 +371,7 @@ serIf bonus n restriction_orig@(Restriction ops alz arz) fs = do
                          else (1,n - 2 - sizeA)
       sizeB <- elements [b_lo..b_hi]
       let sizeC = n - 1 - sizeA - sizeB
-      guard $ sizeC >= 1
+      guard $ (bonus == False || sizeC >= (n-2) `div` 3)
       (b, foldB, lzb, rzb) <- serExp' sizeB restrictionB (if foldA then ExternalFold else fs)
       -- Respecting restriction "at most alz constant-zero bits allowed in if(..) b else c":
       -- Assume b guarantees lzb left zero bits. If lzb <= alz, we're fine - no restriction on c.
