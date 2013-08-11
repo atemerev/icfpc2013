@@ -14,6 +14,7 @@ import Gen
 import RandomBV (bvs)
 import Data.Maybe
 import Data.Bits
+import Debug.Trace
 
 main = defaultMain allTests
 
@@ -57,14 +58,19 @@ generatorTests = localOption (SmallCheckDepth 8) $ testGroup "Generation"
           over (generate (const bvs)) $ \v ->
             let res = eval v undefined undefined e
             in  (lz, rz) == leftRightZeros (expr e)
-{-  , testProperty "Left constraints generate all programs that satisfy the costraint" $
-      \n -> changeDepth (const (n-2)) $
+  , localOption (SmallCheckDepth 6) $ testProperty "Left constraints generate all programs that satisfy the costraint" $
+      \n -> changeDepth (const n) $ do
         over (generate (\n -> [0, 1, 2, 3, 4, 5, 10, 15, 16, 20, 64])) $ \alz ->
-          let satisfyRestriction alz prog = case leftRightZeros prog of (lz,rz) -> lz == alz
-          in (S.fromList (filter (satisfyRestriction alz)
-                                 (list (n-2) (serExpressionSC noRestriction)))
-               == S.fromList (list (n-2) (serExpressionSC (noRestriction {allowedZeroLeftBits = alz})))
--}  ]
+          let satisfyRestriction alz (e,_,_,_) = case leftRightZeros (expr e) of (lz,rz) -> lz <= alz
+          in (S.fromList (filter (satisfyRestriction alz) (list n (serExpressionSC noRestriction)))
+               == S.fromList (list n (serExpressionSC (noRestriction {allowedZeroLeftBits = alz}))))
+  , localOption (SmallCheckDepth 6) $ testProperty "Right constraints generate all programs that satisfy the costraint" $
+      \n -> changeDepth (const n) $ do
+        over (generate (\n -> [0, 1, 2, 3, 4, 5, 10, 15, 16, 20, 64])) $ \arz ->
+          let satisfyRestriction arz (e,_,_,_) = case leftRightZeros (expr e) of (lz,rz) -> rz <= arz
+          in (S.fromList (filter (satisfyRestriction arz) (list n (serExpressionSC noRestriction)))
+               == S.fromList (list n (serExpressionSC (noRestriction {allowedZeroRightBits = arz}))))
+  ]
 
 evalTests = testGroup "Evaluation" $
   [ testCase "Main arg" $

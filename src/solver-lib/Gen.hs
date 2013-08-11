@@ -1,5 +1,5 @@
 {-# LANGUAGE ImplicitParams #-}
-module Gen (leftRightZerosUnop, leftRightZerosBinop, leftRightZeros, generateRestricted, generateRestrictedUpTo, serProg, serExpression', noRestriction, restrictionFromList, OpName(..)) where
+module Gen (leftRightZerosUnop, leftRightZerosBinop, leftRightZeros, Restriction(..), generateRestricted, generateRestrictedUpTo, serProg, serExpression', noRestriction, restrictionFromList, OpName(..)) where
 
 import Types
 import Test.SmallCheck
@@ -294,13 +294,19 @@ cacheMax = 7
 serExp' :: (MonadLevel m, ?tfold :: Bool, ?cache :: Cache) => Int -> Restriction -> FoldState -> m (ExpC, Bool, Int, Int)
 serExp' n _ _ | n < 1 = mzero
 -- if tfold is set, the only occurrence of MainArg is at the toplevel
-serExp' 1 _ InFoldBody = if ?tfold
-                         then msum [return (zero, False, 64, 64), return (one, False, 63, 0),
-                                    return (fold1Arg, False, 0, 0), return (fold2Arg, False, 0, 0)]
-                         else msum [return (mainArg, False, 0, 0),
-                                    return (zero, False, 64, 64), return (one, False, 63, 0),
-                                    return (fold1Arg, False, 0, 0), return (fold2Arg, False, 0, 0)]
-serExp' 1 _ _ = msum [return (zero, False, 64, 64), return (one, False, 63, 0), return (mainArg, False, 0, 0)]
+serExp' 1 (Restriction _ alz arz) InFoldBody = do
+  let maybeZero = if alz == 64 && arz == 64 then return (zero, False, 64, 64) else mzero
+  let maybeOne  = if alz >= 63 then return (one, False, 63, 0) else mzero
+  if ?tfold
+  -- zero is allowed if alz == 64 && arz == 64
+  -- one is allowed if alz >= 63
+  then msum [maybeZero, maybeOne, return (fold1Arg, False, 0, 0), return (fold2Arg, False, 0, 0)]
+  else msum [return (mainArg, False, 0, 0), maybeZero, maybeOne,
+             return (fold1Arg, False, 0, 0), return (fold2Arg, False, 0, 0)]
+serExp' 1 (Restriction _ alz arz) _ = do
+  let maybeZero = if alz == 64 && arz == 64 then return (zero, False, 64, 64) else mzero
+  let maybeOne  = if alz >= 63 then return (one, False, 63, 0) else mzero
+  msum [maybeZero, maybeOne, return (mainArg, False, 0, 0)]
 serExp' 2 restriction fs = msum $ map (\op -> serUnop 2 restriction fs op) (allowedUnaryOps restriction)
 serExp' n restriction@(Restriction _ alz arz) fs
   -- When taking from cache, remember that the cache was unrestricted by left/right bit zeroing.
