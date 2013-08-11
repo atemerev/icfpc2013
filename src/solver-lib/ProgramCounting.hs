@@ -26,6 +26,7 @@ import Data.Bits
 import Data.Word
 import Data.Map (Map)
 import qualified Data.Map as M
+import qualified Types as T
 
 size = 43
 
@@ -38,6 +39,25 @@ data Tag = UF D | AFS D | AF D | TF D
          | And Tag Tag | Or Tag Tag | Xor Tag Tag | Plus Tag Tag
          | If0 Tag Tag Tag | Fold Tag Tag Tag
          deriving (Show, Eq, Ord)
+
+
+tag2expr :: Tag -> T.ExpC
+tag2expr C0 = T.zero
+tag2expr C1 = T.one
+tag2expr X = T.mainArg
+tag2expr Y = T.fold1Arg
+tag2expr Z = T.fold2Arg
+tag2expr (Not x) = T.not_ (tag2expr x)
+tag2expr (Shl1 x) = T.shl1 (tag2expr x)
+tag2expr (Shr4 x) = T.shr4 (tag2expr x)
+tag2expr (Shr16 x) = T.shr16 (tag2expr x)
+tag2expr (And a b) = T.and_ (tag2expr a) (tag2expr b)
+tag2expr (Or a b) = T.and_ (tag2expr a) (tag2expr b)
+tag2expr (Xor a b) = T.and_ (tag2expr a) (tag2expr b)
+tag2expr (Plus a b) = T.and_ (tag2expr a) (tag2expr b)
+tag2expr (If0 a b c) = T.if0 (tag2expr a) (tag2expr b) (tag2expr c)
+tag2expr (Fold a b c) = T.fold_ (tag2expr a) (tag2expr b) (tag2expr c)
+
 
 isLeaf :: Tag -> Bool
 isLeaf tag = tag `elem` [C0,C1,X,Y,Z]
