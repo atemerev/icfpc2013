@@ -5,7 +5,7 @@ import RandomBV (bvs, goodRandoms)
 import Types
 import ServerAPI
 import HsClient (evalProgramById, guessProgram)
-import Gen (generateRestrictedUpTo)
+import Gen (generateRestrictedUpTo, serExpression)
 import Filter (filterProgs, filterByCached)
 import PP (ppProg)
 import ParSearch
@@ -16,6 +16,7 @@ import Data.List (findIndex)
 import Text.Printf
 import ProgramCounting (buildCaches, newContextFromStrings, countTag, allFunctionsSpace, getNumCachedProgs, getCached, findAllCachedMatches, tag2expr, denumeralize)
 import Data.List
+import Test.SmallCheck.Series
 
 basicSolve :: Int -> [String] -> [Word64] -> [Word64] -> IO (Maybe ExpC)
 basicSolve size operations inputs outputs = do
@@ -35,12 +36,12 @@ basicSolve size operations inputs outputs = do
 solveWithTimeout :: Int -> String -> Int -> [String] -> IO ()
 solveWithTimeout tmout pId size operations = do
     res <- timeout (tmout * 10^6) $ do
-      solve pId size operations
+      bonusSolve pId size operations
     case res of
       Just () -> putStrLn ">>> DONE"
       Nothing -> putStrLn $ ">>> TIMED OUT ON " ++ pId
 
-bonusSolve :: String -> Int -> [String] -> IO ()
+bonusSolve :: String -> Int -> [String] -> IO (Maybe ExpC)
 bonusSolve pId size operations = do
   let cacheSize = 550000
       numInputs = 3
@@ -52,11 +53,21 @@ bonusSolve pId size operations = do
   evalRes <- evalProgramById pId bvs
   case evalRes of
     EvalOK outputs -> do
+      let ?bonus = True
       let matches = map (\(outputIdx, output) -> findAllCachedMatches cache outputIdx output) (zip [0..numInputs-1] outputs)
           matchedProgramIds = concat matches
           matchedPrograms :: [ExpC]
           matchedPrograms = map (\n -> tag2expr $ denumeralize (fromIntegral n) allFunctionsSpace) matchedProgramIds
+          -- enum ifs "if {anything} {p1} {p2}"
+          allPrograms = [ if0 (and_ one cond)
+                        | p1 <- matchedPrograms
+                        , p2 <- matchedPrograms
+                        , let p12Size = expSize (expr p1) + expSize (expr p2)
+                        , let condSize = size - p12Size
+                        , cond <- generateRestrictedUpTo condSize operations (64, 64) False Nothing]
       print $ "Matches: " ++ show (map length matches)
+      let candidates = filterProgs inputs outputs $ filterByCached seedOutput programs
+      runPS candidates 4 (const False)
     EvalError msg -> error $ "evalProgramById returned error:" ++ show msg
   where
     ?ctx = newContextFromStrings operations
